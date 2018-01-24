@@ -1,48 +1,51 @@
 #!/bin/bash
 
-set -x
-
+DEBUG=0
+VERBOSE=1
+BASEDIR=.
+DOCKERFILE=$BASEDIR/Dockerfile_PupMaster
+SCRIPTDIR=$BASEDIR/scripts
+BACKUPDIR=$HOME/working/puppet_master_backups
 IMAGE_NAME='pupmaster'
-DOCKERFILE=./Dockerfile_PupMaster
-#currdir=$( readlink -e . )
-SEP='/'
-IS_WINDOWS=0
-# Check if we're running on windows
-if [[ readlink -e $DOCKERFILE | grep -q '^/mnt/j' ]] ; then
-    IS_WINDOWS=1
-    WINDRIVE=$( readlink -e $DOCKERFILE | cut -d/ -f3 )
+
+
+function croak() {
+    echo "ERROR: $*" 1>&2
+    exit 99
+}
+
+
+function sanepath() {
+    [[ $DEBUG -eq 1 ]] && set -x
+    readlink -e "$1" \
+    | sed -e "s|^/mnt/$WINDRIVE/|${WINDRIVE^}:/|" \
+    | sed -e 's|/|\\|g'
+}
+
+action=
+if [[ $DEBUG -eq 1 ]] ; then
+    action=echo
+    VERBOSE=1
+fi
+[[ $VERBOSE -eq 1 ]] && set -x
+
+# Check if Docker is running on Windows
+if docker info --format '{{json .OperatingSystem}}' | grep -qi windows; then
+    readlink -e "$BASEDIR" | grep -q '^\/mnt\/[a-z]\/' \
+    || croak "Unable to determine drive letter for dir paths for docker on windows"
+    WINDRIVE=$( readlink -e "$BASEDIR" | cut -d/ -f3 )
+    [[ ${#WINDRIVE} -ne 1 ]] && croak "Windrive '$WINDRIVE' length is not 1"
 fi
 
 
-
-#    SEP='\'
-#    currdir=$( echo $currdir | sed -e 's|/mnt/j/|J:\\|; s|/|\\|g' )
-#fi
-
-function mkfn() {
-    ( IFS=$SEP; cat <<< "$*" )
-}
-
-
-function winpath() {
-    
-}
-
-
-scriptdir=$( mkfn $currdir scripts )
-backupdir=$( mkfn $currdir backup )
-
-#echo CURRDIR $currdir
-#echo SCRIPTDIR $scriptdir
-#echo BACKUPDIR $backupdir
-
 # Build Pup Master Image
-<$DOCKERFILE docker build -t $IMAGE_NAME -
+<$DOCKERFILE $action docker build -t $IMAGE_NAME - \
+|| croak 'Docker build failed'
 
 # Run Pup Master Image
-docker run -itd --rm \
---mount Type=bind,Source=$scriptdir,Destination=/scripts,readonly \
---mount Type=bind,Source=$backupdir,Destination=/backups,readonly \
+#--mount Type=bind,Source="$(sanepath $BACKUPDIR)",Destination=/backups,readonly \
+$action docker run -itd --rm \
+--mount Type=bind,Source="$(sanepath $SCRIPTDIR)",Destination=/scripts,readonly \
 --hostname=$IMAGE_NAME \
 --name=puppetserver \
 $IMAGE_NAME
