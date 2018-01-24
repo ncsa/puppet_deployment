@@ -1,0 +1,36 @@
+#!/bin/bash
+
+set -x
+
+IMAGE_NAME='pupmaster'
+DOCKERFILE=Dockerfile_PupMaster
+currdir=$( readlink -e . )
+SEP='/'
+# Check if we're running on windows
+if echo $currdir | grep -q '^/mnt/j' ; then
+    SEP='\'
+    currdir=$( echo $currdir | sed -e 's|/mnt/j/|J:\\|; s|/|\\|g' )
+fi
+
+function mkfn() {
+    ( IFS=$SEP; cat <<< "$*" )
+}
+
+
+scriptdir=$( mkfn $currdir scripts )
+backupdir=$( mkfn $currdir backup )
+
+#echo CURRDIR $currdir
+#echo SCRIPTDIR $scriptdir
+#echo BACKUPDIR $backupdir
+
+# Build Pup Master Image
+<$DOCKERFILE docker build -t $IMAGE_NAME -
+
+# Run Pup Master Image
+docker run -itd --rm \
+--mount Type=bind,Source=$scriptdir,Destination=/scripts,readonly \
+--mount Type=bind,Source=$backupdir,Destination=/backups,readonly \
+--hostname=$IMAGE_NAME \
+--name=puppetserver \
+$IMAGE_NAME

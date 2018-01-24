@@ -1,0 +1,4 @@
+bind-utils
+which
+less
+tree
