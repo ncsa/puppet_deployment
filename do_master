@@ -3,17 +3,29 @@
 set -x
 
 IMAGE_NAME='pupmaster'
-DOCKERFILE=Dockerfile_PupMaster
-currdir=$( readlink -e . )
+DOCKERFILE=./Dockerfile_PupMaster
+#currdir=$( readlink -e . )
 SEP='/'
+IS_WINDOWS=0
 # Check if we're running on windows
-if echo $currdir | grep -q '^/mnt/j' ; then
-    SEP='\'
-    currdir=$( echo $currdir | sed -e 's|/mnt/j/|J:\\|; s|/|\\|g' )
+if [[ readlink -e $DOCKERFILE | grep -q '^/mnt/j' ]] ; then
+    IS_WINDOWS=1
+    WINDRIVE=$( readlink -e $DOCKERFILE | cut -d/ -f3 )
 fi
+
+
+
+#    SEP='\'
+#    currdir=$( echo $currdir | sed -e 's|/mnt/j/|J:\\|; s|/|\\|g' )
+#fi
 
 function mkfn() {
     ( IFS=$SEP; cat <<< "$*" )
+}
+
+
+function winpath() {
+    
 }
 
 
