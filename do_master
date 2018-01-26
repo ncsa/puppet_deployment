@@ -5,29 +5,28 @@ VERBOSE=1
 BASEDIR=.
 DOCKERFILE=$BASEDIR/Dockerfile_PupMaster
 SCRIPTDIR=$BASEDIR/scripts
-BACKUPDIR=$HOME/working/puppet_master_backups
+BACKUPDIR=$HOME/backups/lsst-adm01
 IMAGE_NAME='pupmaster'
+WINDRIVE=
+FUNCS=$BASEDIR/common_funcs.sh
+NETNAME=puptestnet
 
 
-function croak() {
-    echo "ERROR: $*" 1>&2
-    exit 99
+[[ -f "$FUNCS" ]] || { echo "Cant find file '$FUNCS'"; exit 1
 }
-
-
-function dumpvars() {
-    [[ $VERBOSE -eq 1 ]] || return 0
-    for a in $*; do
-        printf "%s=%s\n" $a ${!a}
-    done
-}
+.  common_funcs.sh
 
 
 function sanepath() {
     [[ $DEBUG -eq 1 ]] && set -x
-    readlink -e "$1" \
-    | sed -e "s|^/mnt/$WINDRIVE/|${WINDRIVE^}:/|" \
-    | sed -e 's|/|\\|g'
+    path=$( readlink -e "$1" )
+    if [[ "${#WINDRIVE}" -gt 0 ]] ; then
+        echo "$path" \
+        | sed -e "s|^/mnt/$WINDRIVE/|${WINDRIVE^}:/|" \
+        | sed -e 's|/|\\|g'
+    else
+        echo "$path"
+    fi
 }
 
 action=
@@ -45,15 +44,19 @@ if docker info --format '{{json .OperatingSystem}}' | grep -qi windows; then
     [[ ${#WINDRIVE} -ne 1 ]] && croak "Windrive '$WINDRIVE' length is not 1"
 fi
 
-
 # Build Pup Master Image
 <$DOCKERFILE $action docker build -t $IMAGE_NAME - \
 || croak 'Docker build failed'
 
+# Verify custom network exists
+mk_user_net "$NETNAME"
+
 # Run Pup Master Image
-$action docker run -itd --rm \
+#$action docker run -itd --rm \
+$action docker run -itd \
 --mount "Type=bind,Source=$(sanepath $SCRIPTDIR),Destination=/scripts,readonly" \
 --mount "Type=bind,Source=$(sanepath $BACKUPDIR),Destination=/backups,readonly" \
---hostname=$IMAGE_NAME \
+--network="$NETNAME" \
+--hostname=puppet \
 --name=puppetserver \
 $IMAGE_NAME

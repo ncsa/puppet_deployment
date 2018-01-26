@@ -9,5 +9,5 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
     && yum -y install $PKGLIST \
     && yum clean all 
 
-CMD ["bash"]
-#CMD ["/scripts/puppet_install", "master"]
+#CMD ["bash"]
+CMD ["/scripts/puppet_master_install"]
