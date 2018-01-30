@@ -3,18 +3,22 @@
 DEBUG=0
 VERBOSE=1
 BASEDIR=.
-DOCKERFILE=$BASEDIR/Dockerfile_PupMaster
+DOCKERFILE_BASE=$BASEDIR/Dockerfile_Pup
 SCRIPTDIR=$BASEDIR/scripts
-BACKUPDIR=$HOME/backups/lsst-adm01
-IMAGE_NAME='pupmaster'
-WINDRIVE=
 FUNCS=$BASEDIR/common_funcs.sh
+BACKUPDIR=$HOME/backups/lsst-adm01
 NETNAME=puptestnet
+
+pup_type=
+dockerfile=
+imagename=
+containername=
+hostname=
 
 
 [[ -f "$FUNCS" ]] || { echo "Cant find file '$FUNCS'"; exit 1
 }
-.  common_funcs.sh
+.  "$FUNCS"
 
 
 function sanepath() {
@@ -36,6 +40,24 @@ if [[ $DEBUG -eq 1 ]] ; then
 fi
 [[ $VERBOSE -eq 1 ]] && set -x
 
+# Check command line params
+[[ $# -ne 1 ]] && croak "Expected 1 cmdline argument, got '$#'"
+case "$1" in
+    master)
+        pup_type=$1
+        hostname=puppet
+        containername=puppetserver
+        ;;
+    agent)
+        pup_type=$1
+        hostname=agent01
+        containername=puppetagent
+        ;;
+    *) croak 'Unknown install type' ;;
+esac
+imagename="pup${pup_type}"
+dockerfile="${DOCKERFILE_BASE}${pup_type}"
+
 # Check if Docker is running on Windows
 if docker info --format '{{json .OperatingSystem}}' | grep -qi windows; then
     readlink -e "$BASEDIR" | grep -q '^\/mnt\/[a-z]\/' \
@@ -44,8 +66,8 @@ if docker info --format '{{json .OperatingSystem}}' | grep -qi windows; then
     [[ ${#WINDRIVE} -ne 1 ]] && croak "Windrive '$WINDRIVE' length is not 1"
 fi
 
-# Build Pup Master Image
-<$DOCKERFILE $action docker build -t $IMAGE_NAME - \
+# Build Docker Image
+<$dockerfile $action docker build -t $imagename - \
 || croak 'Docker build failed'
 
 # Verify custom network exists
@@ -57,6 +79,6 @@ $action docker run -itd \
 --mount "Type=bind,Source=$(sanepath $SCRIPTDIR),Destination=/scripts,readonly" \
 --mount "Type=bind,Source=$(sanepath $BACKUPDIR),Destination=/backups,readonly" \
 --network="$NETNAME" \
---hostname=puppet \
---name=puppetserver \
-$IMAGE_NAME
+--hostname="$hostname" \
+--name="$containername" \
+$imagename
