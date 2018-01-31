@@ -4,10 +4,12 @@ ENV TZ=America/Chicago
 
 ENV PKGLIST="bind-utils"
 
+ENV PUPMASTER=172.18.0.2
+
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
     && echo $TZ > /etc/timezone \
     && yum -y install $PKGLIST \
     && yum clean all 
 
+CMD ["/scripts/puppet_install agent"]
 CMD ["bash"]
-#CMD ["/scripts/puppet_install agent"]

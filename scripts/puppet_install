@@ -12,12 +12,7 @@ REQUIRED_PKGS=( bind-utils \
 PUPPET=/opt/puppetlabs/bin/puppet
 PUPPETSERVER=/opt/puppetlabs/bin/puppetserver
 HOSTNAME=$(hostname)
-MASTER_HOSTNAME=$HOSTNAME
-#DNS_ALT_NAMES=puppet,puppet.lsst.ncsa.edu,adm01.lsst.ncsa.edu,lsst-adm01.ncsa.illinois.edu
-#AGENT_ENV=production
-#AGENT_SERVER=$HOSTNAME
-#AGENT_LOG=/root/puppet_agent.log.$(date "+%Y%m%dT%H%M%S")
-APPLY_LOG=/root/puppet_apply.log.$(date "+%Y%m%dT%H%M%S")
+DNS_ALT_NAMES=$( hostname -I | awk '{print $1}' )
 BKUP_DIR=/backups
 
 # Global variables that are set or modified by functions below
@@ -47,10 +42,6 @@ function continue_or_exit() {
 
 function log() {
     [[ $VERBOSE -ne 1 ]] && return
-    #echo "FUNCNAME ${FUNCNAME[*]}"
-    #echo "BASH_SOURCE ${BASH_SOURCE[*]}"
-    #echo "BASH_LINENO ${BASH_LINENO[*]}"
-    #echo "In $FUNCNAME ... called by ${FUNCNAME[1]}"
     echo "INFO (${BASH_SOURCE[1]} [${BASH_LINENO[0]}] ${FUNCNAME[1]}) $*"
 }
 
@@ -109,7 +100,7 @@ function puppetdb_install {
 }
 
 
-function restore_config_pre {
+function restore_core {
     log "enter..."
     [[ "$build_type" != 'master' ]] && {
         log "nothing to do for build_type: '$build_type'"
@@ -122,23 +113,34 @@ function restore_config_pre {
         continue_or_exit 
     else
         tar zxPf $fn -T - <<ENDHERE
-/etc/puppetlabs/code/config
-/etc/puppetlabs/code/environments
-/etc/puppetlabs/puppet/auth.conf
-/etc/puppetlabs/puppet/autosign.conf
-/etc/puppetlabs/puppet/ssl
+/etc/puppetlabs/code
+/etc/puppetlabs/puppetserver
 ENDHERE
     fi
 }
 
 
-function restore_config_post {
+### TODO - why is this separate (ie: can it be combined in restore_core)?
+function restore_config {
     log "enter..."
     fn=$( ls -t $BKUP_DIR/*_puppet_config.tar.gz | head -1 )
     [[ -n $fn ]] || croak "Cant find a puppet_config file in backup dir '$BKUP_DIR'"
     tar zxPf $fn -T - <<ENDHERE
-        /etc/puppetlabs/puppet/puppet.conf
+/etc/puppetlabs/puppet/puppet.conf
+/etc/puppetlabs/puppet/auth.conf
+/etc/puppetlabs/puppet/autosign.conf
 ENDHERE
+}
+
+
+function restore_ca {
+    log "enter..."
+    fn=$( ls -t $BKUP_DIR/*_puppet_config.tar.gz | head -1 )
+    [[ -n $fn ]] || croak "Cant find a puppet_config file in backup dir '$BKUP_DIR'"
+    tar zxPf $fn -T - <<ENDHERE
+/etc/puppetlabs/puppet/ssl
+ENDHERE
+
 }
 
 
@@ -156,16 +158,19 @@ function configure_ca {
         log "nothing to do for build_type: '$build_type'"
         return 0
     }
-    [[ -d /etc/puppetlabs/puppet/ssl/ca ]] && return 0
+    [[ -d /etc/puppetlabs/puppet/ssl/ca ]] && {
+        log 'CA already configured, skipping.'
+        return 0
+    }
     $PUPPET cert list -a
-    $PUPPET config set certname $MASTER_HOSTNAME --section master
+    $PUPPET config set certname $HOSTNAME --section master
     $PUPPET certificate generate \
         ${DNS_ALT_NAMES:+--dns-alt-names $DNS_ALT_NAMES} \
         --ca-location local \
-        $MASTER_HOSTNAME
-    $PUPPET cert sign $MASTER_HOSTNAME --allow-dns-alt-names
+        $HOSTNAME
+    $PUPPET cert sign $HOSTNAME --allow-dns-alt-names
     # don't know what this does, but puppetserver won't start otherwise
-    $PUPPET certificate find $MASTER_HOSTNAME --ca-location local &>/dev/null
+    $PUPPET certificate find $HOSTNAME --ca-location local &>/dev/null
 }
 
 
@@ -256,12 +261,24 @@ ENDHERE
 }
 
 
+function agent_config {
+    log "enter..."
+    [[ "$build_type" != 'agent' ]] && {
+        log "nothing to do for build_type: '$build_type'"
+        return
+    }
+    #set custom puppet server (if environment variable PUPMASTER exists)
+    [[ -n "$PUPMASTER" ]] && $PUPPET config set server "$PUPMASTER"
+}
+
+
 function agent_run {
     log "enter..."
-    $PUPPET agent --test \
-                  --server=$AGENT_SERVER \
-                  --environment=$AGENT_ENV \
-                  --logdest=$AGENT_LOG
+    [[ "$build_type" != 'agent' ]] && {
+        log "nothing to do for build_type: '$build_type'"
+        return
+    }
+    $PUPPET agent --test
 }
 
 
@@ -272,11 +289,14 @@ assert_root
 process_cmdline $*
 install_required_pkgs
 puppet_install
-restore_config_pre
+restore_core
+restore_config
+#restore_ca
 configure_ca
 #site_manifest create
 puppetserver start
-#agent_run
+agent_config
+agent_run
 
 # puppetdb has stability issues, not using anymore
 #puppetdb_install
@@ -286,7 +306,6 @@ puppetserver start
 #puppetserver restart
 #agent_run
 ##site_manifest delete
-##restore_config_post
 
 # Needed if running docker
 exec bash
