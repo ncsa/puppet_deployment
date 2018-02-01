@@ -2,12 +2,14 @@ FROM centos:7.4.1708
 
 ENV TZ=America/Chicago
 
-ENV PKGLIST="bind-utils"
+ENV PKGLIST="bind-utils lsof"
+
+ENV PUPBUILDTYPE="master"
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
     && echo $TZ > /etc/timezone \
     && yum -y install $PKGLIST \
     && yum clean all 
 
-CMD ["/scripts/puppet_install", "master"]
-#CMD ["bash"]
+#CMD ["/scripts/puppet_install", $PUPBUILDTYPE]
+CMD ["bash"]

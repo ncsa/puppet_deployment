@@ -1,0 +1,39 @@
+Puppet Apply using ENC (example)
+================================
+https://www.example42.com/2017/04/10/environment-enforcement/
+
+Node Classification in Hiera
+============================
+https://www.example42.com/2017/07/03/node-classification-options/
+
+
+Hiera Version 5 Config
+======================
+https://puppet.com/docs/puppet/5.3/hiera_migrate.html
+
+---
+version: 5
+defaults:
+    datadir: data
+    data_hash: yaml_data
+hierarchy:
+    - name: "Node Classification (ENC)"
+      datadir: "enc"
+      path: "nodes/%{trusted.certname}.yaml"
+
+    - name: "V5 YAML Hierarchy"
+      paths:
+        - "10node/%{trusted.certname}.yaml"
+        - "20cluster/%{cluster}.yaml"
+        - "30datacenter/%{datacenter}.yaml"
+        - "40site/%{site}.yaml"
+        - "99common.yaml"
+
+    - name: "V3 YAML Hierarchy"
+      datadir: hieradata
+      paths:
+        - "01node/%{trusted.certname}.yaml"
+        - "02cluster/%{cluster}.yaml"
+        - "03datacenter/%{datacenter}.yaml"
+        - "04site/%{site}.yaml"
+        - "05common.yaml"

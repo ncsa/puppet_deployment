@@ -5,21 +5,21 @@
 # Global variables (in all caps) are set once here and never changed
 VERBOSE=1
 REPO_URL=https://yum.puppetlabs.com/puppetlabs-release-pc1-el-7.noarch.rpm
-# at the moment, these are the same for both master and agent
-REQUIRED_PKGS=( bind-utils \
-                lsof \
-              )
 PUPPET=/opt/puppetlabs/bin/puppet
 PUPPETSERVER=/opt/puppetlabs/bin/puppetserver
 HOSTNAME=$(hostname)
 DNS_ALT_NAMES=$( hostname -I | awk '{print $1}' )
 BKUP_DIR=/backups
+# at the moment, these are the same for both master and agent
+REQUIRED_PKGS=( bind-utils \
+                lsof \
+              )
 
 # Global variables that are set or modified by functions below
 build_type=
 
 function croak {
-    echo ERROR: $*
+    echo "ERROR (${BASH_SOURCE[1]} [${BASH_LINENO[0]}] ${FUNCNAME[1]}) $*"
     exit 99
 }
 
@@ -215,16 +215,13 @@ ENDHERE
 
 
 function site_manifest {
+    # TODO - would this be different for master vs. agent?
     log "enter..."
     action=$1
     fn=$( $PUPPET config print manifest )/site.pp
     case $action in
-        create)
-                cat > $fn <<ENDHERE
-node $HOSTNAME {
-    notify { 'Hello World': withpath => true }
-}
-ENDHERE
+        dummy)
+                echo "notify{\"Nodename \${trusted['certname']}\":}" > $fn
                 ;;
         update)
                 echo "hiera_include('classes')" >> $fn
@@ -234,6 +231,21 @@ ENDHERE
                 ;;
         *) croak "unknown action '$action'"
                 ;;
+    esac
+}
+
+
+function enc_create {
+    log "enter..."
+    case $build_type in
+        master)
+            $PUPPET config set node_terminus exec --section master
+            $PUPPET config set external_nodes --section master
+            ;;
+        agent)
+            $PUPPET config set node_terminus exec --section user
+            $PUPPET config set external_nodes --section user
+            ;;
     esac
 }
 
@@ -263,22 +275,32 @@ ENDHERE
 
 function agent_config {
     log "enter..."
-    [[ "$build_type" != 'agent' ]] && {
-        log "nothing to do for build_type: '$build_type'"
-        return
-    }
-    #set custom puppet server (if environment variable PUPMASTER exists)
-    [[ -n "$PUPMASTER" ]] && $PUPPET config set server "$PUPMASTER"
+    case $build_type in
+        master)
+            log "nothing to do for build_type: '$build_type'"
+            ;;
+        agent)
+            #set custom puppet server (if environment variable PUPMASTER exists)
+            [[ -n "$PUPMASTER" ]] && $PUPPET config set server "$PUPMASTER"
+            ;;
+        *)
+            croak "Unknown build_type '$build_type'"
+    esac
 }
 
 
 function agent_run {
     log "enter..."
-    [[ "$build_type" != 'agent' ]] && {
-        log "nothing to do for build_type: '$build_type'"
-        return
-    }
-    $PUPPET agent --test
+    case $build_type in
+        master)
+            log "nothing to do for build_type: '$build_type'"
+            ;;
+        agent)
+            $PUPPET agent --test
+            ;;
+        *)
+            croak "Unknown build_type '$build_type'"
+    esac
 }
 
 
@@ -290,13 +312,14 @@ process_cmdline $*
 install_required_pkgs
 puppet_install
 restore_core
-restore_config
+#restore_config
 #restore_ca
 configure_ca
-#site_manifest create
+site_manifest dummy
+#enc_create
 puppetserver start
 agent_config
-agent_run
+#agent_run
 
 # puppetdb has stability issues, not using anymore
 #puppetdb_install

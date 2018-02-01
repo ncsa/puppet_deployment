@@ -41,21 +41,22 @@ fi
 [[ $VERBOSE -eq 1 ]] && set -x
 
 # Check command line params
-[[ $# -ne 1 ]] && croak "Expected 1 cmdline argument, got '$#'"
+[[ $# -lt 1 ]] && croak "Expected 1+ cmdline arguments, got '$#'"
 case "$1" in
     master)
         pup_type=$1
         hostname=puppet
-        containername=puppetserver
+        containername=pupmaster
         ;;
     agent)
         pup_type=$1
         hostname=agent01
-        containername=puppetagent
+        [[ -n "$2" ]] && hostname="$2"
+        containername=pup${hostname}
         ;;
     *) croak 'Unknown install type' ;;
 esac
-imagename="pup${pup_type}"
+imagename="pup${pup_type}${hostname}"
 dockerfile="${DOCKERFILE_BASE}${pup_type}"
 
 # Check if Docker is running on Windows
