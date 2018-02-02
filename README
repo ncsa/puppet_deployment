@@ -37,3 +37,9 @@ hierarchy:
         - "03datacenter/%{datacenter}.yaml"
         - "04site/%{site}.yaml"
         - "05common.yaml"
+
+
+Python PIP Install
+==================
+curl https://bootstrap.pypa.io/get-pip.py | python -
+
