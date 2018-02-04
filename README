@@ -1,3 +1,9 @@
+VM quickstart
+=============
+yum -y install git vim; yum -y upgrade; reboot
+mkdir working; cd working
+
+
 Puppet Apply using ENC (example)
 ================================
 https://www.example42.com/2017/04/10/environment-enforcement/
