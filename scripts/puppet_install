@@ -10,9 +10,7 @@ PUPPETSERVER=/opt/puppetlabs/bin/puppetserver
 HOSTNAME=$(hostname)
 DNS_ALT_NAMES=$( hostname -I | awk '{print $1}' )
 BKUP_DIR=/backups
-REQUIRED_PKGS_COMMON=( bind-utils \
-                lsof \
-              )
+REQUIRED_PKGS_COMMON=( bind-utils lsof )
 REQUIRED_PKGS_MASTER=( PyYAML )
 REQUIRED_PKGS_AGENT=()
 
@@ -22,6 +20,12 @@ build_type=
 function croak {
     echo "ERROR (${BASH_SOURCE[1]} [${BASH_LINENO[0]}] ${FUNCNAME[1]}) $*"
     exit 99
+}
+
+
+function log() {
+    [[ $VERBOSE -ne 1 ]] && return
+    echo "INFO (${BASH_SOURCE[1]} [${BASH_LINENO[0]}] ${FUNCNAME[1]}) $*"
 }
 
 
@@ -38,12 +42,6 @@ function continue_or_exit() {
             No ) exit 1;;
         esac
     done
-}
-
-
-function log() {
-    [[ $VERBOSE -ne 1 ]] && return
-    echo "INFO (${BASH_SOURCE[1]} [${BASH_LINENO[0]}] ${FUNCNAME[1]}) $*"
 }
 
 
@@ -72,12 +70,13 @@ function process_cmdline() {
 
 function install_required_pkgs() {
     log "enter..."
+    local pkg_list=( "${REQUIRED_PKGS_COMMON[@]}" )
     case "$build_type" in
         master)
-            pkg_list=( "${REQUIRED_PKGS_COMMON[@]}" "${REQUIRED_PKGS_MASTER[@]}" )
+            pkg_list+=( "${REQUIRED_PKGS_MASTER[@]}" )
             ;;
         agent)
-            pkg_list=( "${REQUIRED_PKGS_COMMON[@]}" "${REQUIRED_PKGS_AGENT[@]}" )
+            pkg_list+=( "${REQUIRED_PKGS_AGENT[@]}" )
             ;;
         *) croak "unknown build type '$build_type'"
     esac
@@ -91,9 +90,9 @@ function puppet_install {
     ls /etc/yum.repos.d/puppetlabs*.repo &>/dev/null \
     || yum -y install $REPO_URL
 
-    local pkglist=()
-    [[ "$build_type" == "master" ]] && pkglist+=( puppetserver )
-    [[ "$build_type" == "agent" ]] && pkglist+=( puppet-agent )
+    local pkglist
+    [[ "$build_type" == "master" ]] && pkglist=( puppetserver )
+    [[ "$build_type" == "agent" ]] && pkglist=( puppet-agent )
     yum -y install "${pkglist[@]}"
 }
 
@@ -128,9 +127,13 @@ ENDHERE
 }
 
 
-### TODO - why is this separate (ie: can it be combined in restore_core)?
+# separate from restore_core in case there is a need for different config
 function restore_config {
     log "enter..."
+    [[ "$build_type" != 'master' ]] && {
+        log "nothing to do for build_type: '$build_type'"
+        return
+    }
     fn=$( ls -t $BKUP_DIR/*_puppet_config.tar.gz | head -1 )
     [[ -n $fn ]] || croak "Cant find a puppet_config file in backup dir '$BKUP_DIR'"
     tar zxPf $fn -T - <<ENDHERE
