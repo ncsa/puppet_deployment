@@ -53,8 +53,11 @@ function assert_root() {
 
 function process_cmdline() {
     log "enter..."
-    [[ $# -eq 1 ]] || croak "Expected 1 argument, got '$#'"
-    case "$1" in
+    [[ $# -lt 1 ]] && croak "Expected 1 or 2 arguments, got '$#'"
+    [[ $# -gt 2 ]] && croak "Expected 1 or 2 arguments, got '$#'"
+    [[ -n "$2" ]] && export PUPCERTNAME="$2"
+    build_type="$1"
+    case "$build_type" in
         server|master)
             build_type=master
             ;;
@@ -62,7 +65,7 @@ function process_cmdline() {
             build_type=agent
             ;;
         *)
-            croak "Invalid build type: '$1'"
+            croak "Invalid build type: '$build_type'"
             ;;
     esac
 }
