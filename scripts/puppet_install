@@ -312,6 +312,7 @@ function agent_config {
         agent)
             #set custom puppet server (if environment variable PUPMASTER exists)
             [[ -n "$PUPMASTER" ]] && $PUPPET config set server "$PUPMASTER"
+            [[ -n "$PUPCERTNAME" ]] && $PUPPET config set certname "$PUPCERTNAME"
             ;;
         *)
             croak "Unknown build_type '$build_type'"
