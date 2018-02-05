@@ -1,7 +1,7 @@
 VM quickstart
 =============
 yum -y install git vim; yum -y upgrade; reboot
-mkdir working; cd working
+mkdir working; cd working; git clone https://github.com/ncsa/puppet_deployment.git
 
 
 Puppet Apply using ENC (example)

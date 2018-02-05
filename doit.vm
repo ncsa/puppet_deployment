@@ -1,0 +1,62 @@
+#!/bin/bash
+
+DEBUG=0
+VERBOSE=0
+PUPMASTER=
+build_type=
+
+
+[[ -f "$FUNCS" ]] || { echo "Cant find file '$FUNCS'"; exit 1
+}
+.  "$FUNCS"
+
+# Process options
+while getopts ":m:vd" opt; do
+  case $opt in
+    m)
+      export PUPMASTER="$OPTARG"
+      #echo "-a was triggered, Parameter: $OPTARG" >&2
+      ;;
+    v)
+      VERBOSE=1
+      ;;
+    d)
+      VERBOSE=1
+      DEBUG=1
+      ;;
+    \?)
+      croak "Invalid option: -$OPTARG"
+      ;;
+    :)
+      croak "Option -$OPTARG requires an argument."
+      ;;
+  esac
+done
+shift $((OPTIND-1))
+
+action=
+if [[ $DEBUG -eq 1 ]] ; then
+    action=echo
+    VERBOSE=1
+fi
+[[ $VERBOSE -eq 1 ]] && set -x
+
+
+# Check command line params
+[[ $# -lt 1 ]] && croak "Expected 1+ cmdline arguments, got '$#'"
+case "$1" in
+    master)
+        build_type=$1
+        ;;
+    agent)
+        build_type=$1
+        [[ -n "$2" ]] && export PUPCERTNAME="$2"
+        [[ -n "$PUPMASTER" ]] || croak "PUPMASTER is not set"
+        ;;
+    *) croak "Unknown install type '$1'" ;;
+esac
+
+installer=$( readlink -e $( dirname $0 ) )/scripts/puppet_install
+[[ -f "$installer" ]] || croak "Not a file '$installer'"
+[[ -x "$installer" ]] || croak "Installer '$installer' is not executable"
+$action $installer "$build_type" "$PUPCERTNAME"
