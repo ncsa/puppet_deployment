@@ -112,39 +112,47 @@ function puppetdb_install {
 
 function restore_core {
     log "enter..."
-    [[ "$build_type" != 'master' ]] && {
-        log "nothing to do for build_type: '$build_type'"
-        return
-    }
-    fn=$( ls -t $BKUP_DIR/*_puppet_config.tar.gz | head -1 )
-    if [[ -z $fn ]] ; then
-        echo "Cant find a puppet_config file in backup dir '$BKUP_DIR'"
-        echo "This step will be skipped"
-        continue_or_exit 
-    else
-        tar zxPf $fn -T - <<ENDHERE
+    case "$build_type" in
+        master)
+            fn=$( ls -t $BKUP_DIR/*_puppet_config.tar.gz | head -1 )
+            if [[ -z $fn ]] ; then
+                echo "Cant find a puppet_config file in backup dir '$BKUP_DIR'"
+                echo "This step will be skipped"
+                continue_or_exit 
+            else
+                tar zxPf $fn -T - <<ENDHERE
 /etc/puppetlabs/code
 /etc/puppetlabs/puppetserver
 ENDHERE
-    fi
+            fi
+            ;;
+        agent)
+            log "nothing to do for build_type: '$build_type'"
+            ;;
+        *) croak "unknown build type '$build_type'"
+    esac
 }
 
 
 # separate from restore_core in case there is a need for different config
 function restore_config {
     log "enter..."
-    [[ "$build_type" != 'master' ]] && {
-        log "nothing to do for build_type: '$build_type'"
-        return
-    }
-    fn=$( ls -t $BKUP_DIR/*_puppet_config.tar.gz | head -1 )
-    [[ -n $fn ]] || croak "Cant find a puppet_config file in backup dir '$BKUP_DIR'"
-    tar zxPf $fn -T - <<ENDHERE
+    case "$build_type" in
+        master)
+            fn=$( ls -t $BKUP_DIR/*_puppet_config.tar.gz | head -1 )
+            [[ -n $fn ]] || croak "Cant find a puppet_config file in backup dir '$BKUP_DIR'"
+            tar zxPf $fn -T - <<ENDHERE
 /etc/puppetlabs/puppet/puppet.conf
 /etc/puppetlabs/puppet/auth.conf
 /etc/puppetlabs/puppet/autosign.conf
 /etc/puppetlabs/puppet/hiera.yaml
 ENDHERE
+            ;;
+        agent)
+            log "nothing to do for build_type: '$build_type'"
+            ;;
+        *) croak "unknown build type '$build_type'"
+    esac
 }
 
 
@@ -184,23 +192,27 @@ function restore_db {
 
 function configure_ca {
     log "enter..."
-    [[ "$build_type" != 'master' ]] && {
-        log "nothing to do for build_type: '$build_type'"
-        return 0
-    }
-    [[ -d /etc/puppetlabs/puppet/ssl/ca ]] && {
-        log 'CA already configured, skipping.'
-        return 0
-    }
-    $PUPPET cert list -a
-    $PUPPET config set certname $HOSTNAME --section master
-    $PUPPET certificate generate \
-        ${DNS_ALT_NAMES:+--dns-alt-names $DNS_ALT_NAMES} \
-        --ca-location local \
-        $HOSTNAME
-    $PUPPET cert sign $HOSTNAME --allow-dns-alt-names
-    # don't know what this does, but puppetserver won't start otherwise
-    $PUPPET certificate find $HOSTNAME --ca-location local &>/dev/null
+    case "$build_type" in
+        master)
+            [[ -d /etc/puppetlabs/puppet/ssl/ca ]] && {
+                log 'CA already configured, skipping.'
+                return 0
+            }
+            $PUPPET cert list -a
+            $PUPPET config set certname $HOSTNAME --section master
+            $PUPPET certificate generate \
+                ${DNS_ALT_NAMES:+--dns-alt-names $DNS_ALT_NAMES} \
+                --ca-location local \
+                $HOSTNAME
+            $PUPPET cert sign $HOSTNAME --allow-dns-alt-names
+            # don't know what this does, but puppetserver won't start otherwise
+            $PUPPET certificate find $HOSTNAME --ca-location local &>/dev/null
+            ;;
+        agent)
+            log "nothing to do for build_type: '$build_type'"
+            ;;
+        *) croak "unknown build type '$build_type'"
+    esac
 }
 
 
