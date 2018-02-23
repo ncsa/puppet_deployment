@@ -3,3 +3,5 @@ which
 less
 tree
 iproute
+git
+vim
