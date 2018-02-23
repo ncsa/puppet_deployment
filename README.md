@@ -5,7 +5,7 @@
    1. `yum -y install git vim && yum -y upgrade && reboot`
    1. `cd /root; git clone https://github.com/ncsa/puppet_deployment.git`
    1. (optional) \
-      `< puppet_deployment/scripts/helper_pkgs.txt xargs yum -y install`
+      `< /root/puppet_deployment/scripts/helper_pkgs.txt xargs yum -y install`
 1. MASTER
    1. `mkdir /backups`
    1. Copy backup tar.gz file into `/backups/.`
