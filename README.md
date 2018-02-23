@@ -10,9 +10,9 @@
    1. `mkdir /backups`
    1. Copy backup tar.gz file into `/backups/.`
    1. `/root/puppet_deployment/doit.vm master`
-   1. `hostname -I` #Use this ip for agent setup (-p option)
+   1. `hostname -I` #Use this ip for agent setup (-m option)
 1. AGENT (relevant for testing in VM infrastructure)
-   1. `/root/puppet_deployment/doit.vm -p <IPADDR> agent [hostname.fqdn]` \
+   1. `/root/puppet_deployment/doit.vm -m <IPADDR> agent [hostname.fqdn]` \
       ...where `<IPADDR>` is the ip of the puppet master \
       ...where `hostname.fqdn` is optional and allows the VM agent to impersonate
       a live node that already exists in the puppet master's ENC.
