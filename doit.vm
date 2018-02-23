@@ -2,11 +2,16 @@
 
 DEBUG=0
 VERBOSE=0
+PRG=$( readlink -e $0 )
+[[ -f "$PRG" ]] || { echo 'FATAL: Cant determine scriptname.' 1>&2; exit 1
+}
+BASE=$( dirname $PRG )
+FUNCS=$BASE/common_funcs.sh
 PUPMASTER=
 build_type=
 
 
-[[ -f "$FUNCS" ]] || { echo "Cant find file '$FUNCS'"; exit 1
+[[ -f "$FUNCS" ]] || { echo "FATAL: Cant find file '$FUNCS'" 1>&2; exit 1
 }
 .  "$FUNCS"
 
@@ -15,7 +20,6 @@ while getopts ":m:vd" opt; do
   case $opt in
     m)
       export PUPMASTER="$OPTARG"
-      #echo "-a was triggered, Parameter: $OPTARG" >&2
       ;;
     v)
       VERBOSE=1
