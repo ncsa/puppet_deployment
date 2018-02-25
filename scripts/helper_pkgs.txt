@@ -5,3 +5,4 @@ tree
 iproute
 git
 vim
+jq
