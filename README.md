@@ -2,7 +2,7 @@
 
 ## VM (or live host) quickstart
 1. COMMON (for both master and agent nodes)
-   1. `yum -y install git vim && yum -y upgrade && reboot`
+   1. `yum -y upgrade && reboot`
    1. `cd /root; git clone https://github.com/ncsa/puppet_deployment.git`
    1. (optional) \
       `< /root/puppet_deployment/scripts/helper_pkgs.txt xargs yum -y install`
