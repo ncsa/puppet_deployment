@@ -16,6 +16,7 @@
       ...where `<IPADDR>` is the ip of the puppet master \
       ...where `hostname.fqdn` is optional and allows the VM agent to impersonate
       a live node that already exists in the puppet master's ENC.
+   1. puppet agent -t
 
 ## Docker
 1. MASTER
