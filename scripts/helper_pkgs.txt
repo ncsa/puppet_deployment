@@ -6,3 +6,4 @@ iproute
 git
 vim
 jq
+lsof
