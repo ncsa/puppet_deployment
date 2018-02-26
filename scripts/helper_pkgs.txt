@@ -7,3 +7,4 @@ git
 vim
 jq
 lsof
+python-virtualenv
