@@ -24,7 +24,7 @@
 1. AGENT (relevant for testing in VM infrastructure)
    1. `doit.docker agent [hostname.fqdn]`
 
-# Sample Usage
+# Sample Scenario
 1. Setup Puppet Master
     1. (See quickstart above)
     1. https://github.com/ncsa/pupmodver
