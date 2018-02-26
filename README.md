@@ -25,6 +25,7 @@
    1. `doit.docker agent [hostname.fqdn]`
 
 # Sample Scenario
+Enable and test environment isolation
 1. Setup Puppet Master
     1. (See quickstart above)
     1. https://github.com/ncsa/pupmodver
@@ -58,11 +59,11 @@
                bak=${REPLY}.$now
                cp $REPLY $bak
                awk '
-       /allow_qualys_scan/ { print "#",$0; next }
-       /gpfs/ { print "#",$0; next }
-       /telegraf/ { print "#",$0; next }
-       /yum_client/ { print "#",$0; next }
-       /slurm/ { print "#",$0; next }
+       /allow_qualys_scan/ && ! /#/ { print "#",$0; next }
+       /gpfs/              && ! /#/ { print "#",$0; next }
+       /telegraf/          && ! /#/ { print "#",$0; next }
+       /yum_client/        && ! /#/ { print "#",$0; next }
+       /slurm/             && ! /#/ { print "#",$0; next }
        {print}
        ' $bak > $REPLY
            done
