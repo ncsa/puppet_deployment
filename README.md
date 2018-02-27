@@ -50,7 +50,7 @@ Enable and test environment isolation
        ```
     1. Disable puppet profiles that can't be used in the virtual environment
        ```
-       envdir=/etc/puppetlabs/code/environments
+       envdir=$( puppet config print environmentpath )
        now=$(date +%s)
        for env in $(ls -d $envdir/*); do
            manifestdir=$env/modules/role/manifests
@@ -71,7 +71,7 @@ Enable and test environment isolation
        ```
     1. Enable puppet Environment Isolation
        ```
-       ls $(puppet config print environmentpath) | xargs -n1 puppet generate types --force --environment
+       /root/puppet_deployment/scripts/update_environment_isolation.sh
        ```
 1. Setup Client Node
     1. (See quickstart above)
