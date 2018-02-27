@@ -71,7 +71,7 @@ Enable and test environment isolation
        ```
     1. Enable puppet Environment Isolation
        ```
-       ls /etc/puppetlabs/code/environments/ | xargs -n1 puppet generate types --force --environment
+       ls $(puppet config print environmentpath) | xargs -n1 puppet generate types --force --environment
        ```
 1. Setup Client Node
     1. (See quickstart above)
