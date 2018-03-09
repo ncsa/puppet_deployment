@@ -29,23 +29,29 @@ Enable and test environment isolation
 1. Setup Puppet Master
     1. (See quickstart above)
     1. https://github.com/ncsa/pupmodver
-    1. Remove extraneous environments
+    1. Remove extraneous environments (optional)
        ```
        ls -d /etc/puppetlabs/code/environments/* \
        | grep -v 'production\|test' \
        | xargs -n1 -I{} find {} -delete
        ```
-    1. Make backup of puppet environments
+    1. Make backup of puppet environments (optional)
        ```
        rsync -av --exclude '.git' /etc/puppetlabs/code/environments /etc/puppetlabs/code/env.ORIG
        ```
-    1. Remove unneeded puppet modules from `test` enironment
+    1. Remove unneeded puppet modules from `test` enironment (optional)
        ```
-       pupmodver.py -e test -t | awk '
-
-       /herculesteam-augeasproviders_core/ { system( "puppet module uninstall --environment test" ) }
-       /herculesteam-augeasproviders_ssh/ { system( "puppet module uninstall --environment test" ) }
-       /puppet-grafana/ { system( "puppet module uninstall --environment test" ) }
+       venv/bin/python pupmodver/pupmodver.py -e test -t | awk '
+       /herculesteam-augeasproviders_core/ { modules_to_remove[$1]=1 }
+       /herculesteam-augeasproviders_ssh/  { modules_to_remove[$1]=1 }
+       /puppet-grafana/                    { modules_to_remove[$1]=1 }
+       END {
+         for ( module_name in modules_to_remove ) {
+            cmd=sprintf( "puppet module uninstall %s --environment test", module_name )
+            print( cmd )
+            system( cmd )
+         }
+       }
        '
        ```
     1. Disable puppet profiles that can't be used in the virtual environment
