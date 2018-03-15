@@ -24,6 +24,10 @@
 1. AGENT (relevant for testing in VM infrastructure)
    1. `doit.docker agent [hostname.fqdn]`
 
+NOTE: For testing in docker, need the following two things:
+1. an image that includes _systemd_ such as _centos/systemd_
+1. Add `--cap-add SYS_ADMIN` to the docker run command
+
 # Sample Scenario
 Enable and test environment isolation
 1. Setup Puppet Master
