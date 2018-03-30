@@ -16,6 +16,11 @@
       ...where `<IPADDR>` is the ip of the puppet master \
       ...where `hostname.fqdn` is optional and allows the VM agent to impersonate
       a live node that already exists in the puppet master's ENC.
+   1. (optional) configure attached volume
+      ```
+      parted <device> mklabel gpt unit '%' mkpart '/qserv' 0 100
+      mkfs -t xfs -L '/qserv' <device>
+      ```
    1. puppet agent -t
 
 ## Docker
