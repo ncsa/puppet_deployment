@@ -1,7 +1,11 @@
 bind-utils
-which
-less
-tree
+git
 iproute
+jq
+less
+lsof
 python2-pip
 python-virtualenv
+tree
+vim
+which
