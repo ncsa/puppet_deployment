@@ -3,3 +3,5 @@ which
 less
 tree
 iproute
+python2-pip
+python-virtualenv
