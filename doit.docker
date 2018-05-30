@@ -1,37 +1,73 @@
 #!/bin/bash
 
 DEBUG=0
-VERBOSE=1
+VERBOSE=0
 BASEDIR=.
 DOCKERFILE_BASE=$BASEDIR/Dockerfile_Pup
 SCRIPTDIR=$BASEDIR/scripts
 FUNCS=$BASEDIR/common_funcs.sh
 BACKUPDIR=$HOME/backups/lsst-adm01
 NETNAME=puptestnet
+NETCIDR=172.18.0.0/24
+IP_START=172.18.0.2
+IMAGELABEL=5fbd64084033ec07
+CONTAINERLABEL=26b44bba0908e1fd
+
 
 pup_type=
-dockerfile=
-imagename=
-containername=
 hostname=
+#dockerfile=
+imagename=
+container_name=
+container_ip=
 
 
 [[ -f "$FUNCS" ]] || { echo "Cant find file '$FUNCS'"; exit 1
 }
-.  "$FUNCS"
+source  "$FUNCS"
 
 
-function sanepath() {
-    [[ $DEBUG -eq 1 ]] && set -x
-    path=$( readlink -e "$1" )
-    if [[ "${#WINDRIVE}" -gt 0 ]] ; then
-        echo "$path" \
-        | sed -e "s|^/mnt/$WINDRIVE/|${WINDRIVE^}:/|" \
-        | sed -e 's|/|\\|g'
-    else
-        echo "$path"
-    fi
+function mk_dockerfile() {
+#FROM centos/systemd
+    cat <<ENDDOCKERFILE
+FROM centos:7.4.1708
+ENV TZ=America/Chicago
+ENV PKGLIST="bind-utils lsof"
+ENV PUPBUILDTYPE=${pup_type}
+ENV PUPMASTER=${IP_START}
+LABEL groupID=${IMAGELABEL}
+RUN ln -snf /usr/share/zoneinfo/\$TZ /etc/localtime \\
+    && echo \$TZ > /etc/timezone \\
+    && yum -y install \$PKGLIST \\
+    && yum clean all \\
+    && rm -rf /var/cache/yum
+CMD ["bash"]
+ENDDOCKERFILE
 }
+
+
+# Process cmdline options
+while getopts ":m:vd" opt; do
+    case $opt in
+        m)
+            export PUPMASTER="$OPTARG"
+            ;;
+        v)
+            VERBOSE=1
+            ;;
+        d)
+            VERBOSE=1
+            DEBUG=1
+            ;;
+        \?)
+            croak "Invalid option: -$OPTARG"
+            ;;
+        :)
+            croak "Option -$OPTARG requires an argument."
+            ;;
+    esac
+done
+shift $((OPTIND-1))
 
 action=
 if [[ $DEBUG -eq 1 ]] ; then
@@ -44,20 +80,24 @@ fi
 [[ $# -lt 1 ]] && croak "Expected 1+ cmdline arguments, got '$#'"
 case "$1" in
     master)
-        pup_type=$1
+        pup_type=master
         hostname=puppet
-        containername=pupmaster
+        container_name=pupmaster
+        container_ip=$IP_START
         ;;
     agent)
-        pup_type=$1
-        hostname=agent01
+        pup_type=agent
+        incr=$( docker image ls -q --filter label=groupID=$IMAGELABEL | wc -l )
+        [[ $incr -lt 1 ]] && croak 'No existing images found; trying to start an agent without a master?'
+        hostname=agent$(printf "%02d" $incr)
         [[ -n "$2" ]] && hostname="$2"
-        containername=pup${hostname}
+        container_ip=$( ip_increment $IP_START $incr )
+        container_name=pup${hostname}
         ;;
     *) croak 'Unknown install type' ;;
 esac
 imagename="pup${pup_type}${hostname}"
-dockerfile="${DOCKERFILE_BASE}${pup_type}"
+#dockerfile="${DOCKERFILE_BASE}${pup_type}"
 
 # Check if Docker is running on Windows
 if docker info --format '{{json .OperatingSystem}}' | grep -qi windows; then
@@ -68,18 +108,22 @@ if docker info --format '{{json .OperatingSystem}}' | grep -qi windows; then
 fi
 
 # Build Docker Image
-<$dockerfile $action docker build -t $imagename - \
+mk_dockerfile \
+| $action docker build -t $imagename - \
 || croak 'Docker build failed'
 
 # Verify custom network exists
 mk_user_net "$NETNAME"
 
-# Run Pup Master Image
+# Run Docker Container
 #$action docker run -itd --rm \
+#--cap-add SYS_ADMIN \
 $action docker run -itd \
---mount "Type=bind,Source=$(sanepath $SCRIPTDIR),Destination=/scripts,readonly" \
---mount "Type=bind,Source=$(sanepath $BACKUPDIR),Destination=/backups,readonly" \
+--ip="$container_ip" \
 --network="$NETNAME" \
 --hostname="$hostname" \
---name="$containername" \
+--name="$container_name" \
+--mount "Type=bind,Source=$(sanepath $SCRIPTDIR),Destination=/scripts,readonly" \
+--mount "Type=bind,Source=$(sanepath $BACKUPDIR),Destination=/backups,readonly" \
+--label groupID=$CONTAINERLABEL \
 $imagename

@@ -279,16 +279,17 @@ function site_manifest {
 
 function enc_create {
     log "enter..."
+    local section
     case $build_type in
         master)
-            $PUPPET config set node_terminus exec --section master
-            $PUPPET config set external_nodes --section master
+            section=master
             ;;
         agent)
-            $PUPPET config set node_terminus exec --section user
-            $PUPPET config set external_nodes --section user
+            section=user
             ;;
     esac
+    $PUPPET config set node_terminus exec --section $section
+    $PUPPET config set external_nodes --section $section
 }
 
 
