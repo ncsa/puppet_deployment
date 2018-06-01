@@ -27,10 +27,10 @@ container_ip=
 source  "$FUNCS"
 
 
+#FROM centos:7.4.1708
 function mk_dockerfile() {
-#FROM centos/systemd
     cat <<ENDDOCKERFILE
-FROM centos:7.4.1708
+FROM centos/systemd
 ENV TZ=America/Chicago
 ENV PKGLIST="bind-utils lsof"
 ENV PUPBUILDTYPE=${pup_type}
@@ -43,6 +43,18 @@ RUN ln -snf /usr/share/zoneinfo/\$TZ /etc/localtime \\
     && rm -rf /var/cache/yum
 CMD ["bash"]
 ENDDOCKERFILE
+}
+
+
+function iclean() {
+    # Clean docker images
+    rm_images "label=groupID=$IMAGELABEL" "dangling=false"
+}
+
+
+function pclean() {
+    # Clean docker containers / processes
+    rm_containers "label=groupID=$CONTAINERLABEL"
 }
 
 
@@ -74,7 +86,8 @@ if [[ $DEBUG -eq 1 ]] ; then
     action=echo
     VERBOSE=1
 fi
-[[ $VERBOSE -eq 1 ]] && set -x
+#[[ $VERBOSE -eq 1 ]] && set -x
+[[ $DEBUG -eq 1 ]] && set -x
 
 # Check command line params
 [[ $# -lt 1 ]] && croak "Expected 1+ cmdline arguments, got '$#'"
@@ -87,12 +100,30 @@ case "$1" in
         ;;
     agent)
         pup_type=agent
-        incr=$( docker image ls -q --filter label=groupID=$IMAGELABEL | wc -l )
+        incr=$( docker images -q --filter label=groupID=$IMAGELABEL | wc -l )
         [[ $incr -lt 1 ]] && croak 'No existing images found; trying to start an agent without a master?'
         hostname=agent$(printf "%02d" $incr)
         [[ -n "$2" ]] && hostname="$2"
         container_ip=$( ip_increment $IP_START $incr )
         container_name=pup${hostname}
+        ;;
+    ls | list | show | info)
+        docker images --filter "label=groupID=$IMAGELABEL"
+        docker ps --filter "label=groupID=$CONTAINERLABEL"
+        exit
+        ;;
+    iclean | imclean | image_clean)
+        iclean
+        exit
+        ;;
+    pclean | psclean | process_clean | container_clean)
+        pclean
+        exit
+        ;;
+    clean | all_clean | cleanall)
+        pclean
+        iclean
+        exit
         ;;
     *) croak 'Unknown install type' ;;
 esac
@@ -108,17 +139,18 @@ if docker info --format '{{json .OperatingSystem}}' | grep -qi windows; then
 fi
 
 # Build Docker Image
-mk_dockerfile \
-| $action docker build -t $imagename - \
+image_exists $imagename "label=groupID=$IMAGELABEL" \
+&& log "Image '$imagename' already exists, skipping image create" \
+|| mk_dockerfile | $action docker build -t $imagename - \
 || croak 'Docker build failed'
 
 # Verify custom network exists
 mk_user_net "$NETNAME"
 
 # Run Docker Container
-#$action docker run -itd --rm \
-#--cap-add SYS_ADMIN \
-$action docker run -itd \
+container_exists $container_name "label=groupID=$CONTAINERLABEL" \
+&& log "Container '$container_name' already exists, skipping container create" \
+|| $action docker run -itd \
 --ip="$container_ip" \
 --network="$NETNAME" \
 --hostname="$hostname" \
@@ -126,4 +158,5 @@ $action docker run -itd \
 --mount "Type=bind,Source=$(sanepath $SCRIPTDIR),Destination=/scripts,readonly" \
 --mount "Type=bind,Source=$(sanepath $BACKUPDIR),Destination=/backups,readonly" \
 --label groupID=$CONTAINERLABEL \
+--cap-add SYS_ADMIN \
 $imagename
