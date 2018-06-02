@@ -3,7 +3,6 @@
 PUPPET=/opt/puppetlabs/bin/puppet
 ENVDIR=$( $PUPPET config print environmentpath )
 
-set -x
 now=$(date +%s)
 for env in $(ls -d $ENVDIR/*); do
     manifestdir=$env/modules/role/manifests
