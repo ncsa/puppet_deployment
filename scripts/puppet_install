@@ -23,6 +23,11 @@ function croak {
 }
 
 
+function warn() {
+    echo "WARN (${BASH_SOURCE[1]} [${BASH_LINENO[0]}] ${FUNCNAME[1]}) $*"
+}
+
+
 function log() {
     [[ $VERBOSE -ne 1 ]] && return
     echo "INFO (${BASH_SOURCE[1]} [${BASH_LINENO[0]}] ${FUNCNAME[1]}) $*"
@@ -51,23 +56,52 @@ function assert_root() {
 }
 
 
-function process_cmdline() {
-    log "enter..."
-    [[ $# -lt 1 ]] && croak "Expected 1 or 2 arguments, got '$#'"
-    [[ $# -gt 2 ]] && croak "Expected 1 or 2 arguments, got '$#'"
-    [[ -n "$2" ]] && export PUPCERTNAME="$2"
-    build_type="$1"
+function assert_valid_buildtype() {
+    # Check build_type
     case "$build_type" in
-        server|master)
-            build_type=master
-            ;;
-        client|agent)
-            build_type=agent
+        master|agent)
+            : #pass
             ;;
         *)
             croak "Invalid build type: '$build_type'"
             ;;
     esac
+}
+
+
+function process_cmdline() {
+    log "enter..."
+    if [[ $# -lt 1 ]] ; then
+        # Require PUPBUILDTYPE
+        [[ -z "$PUPBUILDTYPE" ]] && croak "No parameters given and PUPBUILDTYPE is empty"
+        build_type="$PUPBUILDTYPE"
+        log "No cmdline parms found, using build_type=$build_type from env PUPBUILDTYPE"
+    elif [[ $# -eq 1 ]] ; then
+        # Check param for valid build type
+        case "$1" in
+            master|agent)
+                build_type="$1"
+                log "cmdline parm looks like a build_type, setting build_type=$build_type"
+                ;;
+            *)
+                PUPCERTNAME="$1"
+                warn "cmdline parm is not a valid build_type, using as PUPCERTNAME"
+                [[ -z "$PUPBUILDTYPE" ]] && croak "unknown build_type and env var PUPBUILDTYPE is empty"
+                warn "using env var PUPBUILDTYPE for build_type"
+                build_type=$build_type
+                ;;
+        esac
+    elif [[ $# -eq 2 ]] ; then
+        build_type="$1"
+        PUPCERTNAME="$2"
+    else 
+        croak "Expected 0,1 or 2 arguments, got '$#'"
+    fi
+    assert_valid_buildtype
+    log "build_type=$build_type"
+    [[ -n "$PUPCERTNAME" ]] \
+    && log "PUPCERTNAME=$PUPCERTNAME" \
+    || log "HOSTNAME=$HOSTNAME"
 }
 
 
