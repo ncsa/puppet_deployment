@@ -3,7 +3,7 @@
 DEBUG=0
 VERBOSE=0
 BASEDIR=.
-DOCKERFILE_BASE=$BASEDIR/Dockerfile_Pup
+DOCKER_IMAGE_BASE=local/c7-systemd
 SCRIPTDIR=$BASEDIR/scripts
 FUNCS=$BASEDIR/common_funcs.sh
 BACKUPDIR=$HOME/backups/lsst-adm01
@@ -27,10 +27,9 @@ container_ip=
 source  "$FUNCS"
 
 
-#FROM centos:7.4.1708
 function mk_dockerfile() {
     cat <<ENDDOCKERFILE
-FROM centos/systemd
+FROM ${DOCKER_IMAGE_BASE}
 ENV TZ=America/Chicago
 ENV PKGLIST="bind-utils lsof"
 ENV PUPBUILDTYPE=${pup_type}
@@ -41,7 +40,7 @@ RUN ln -snf /usr/share/zoneinfo/\$TZ /etc/localtime \\
     && yum -y install \$PKGLIST \\
     && yum clean all \\
     && rm -rf /var/cache/yum
-CMD ["bash"]
+CMD ["/usr/sbin/init"]
 ENDDOCKERFILE
 }
 
@@ -53,8 +52,19 @@ function iclean() {
 
 
 function pclean() {
+    # Get tmpdirs
+    format='{{range .Mounts}} {{if eq .Destination "/run"}} {{.Source}} {{end}} {{end}}'
+    tmpdirlist=( $( docker_search container "label=groupID=$CONTAINERLABEL" \
+    | xargs -r -n1 docker inspect --format "$format" \
+    ) )
+
     # Clean docker containers / processes
     rm_containers "label=groupID=$CONTAINERLABEL"
+
+    # Remove tmpdirs
+    set -x
+    echo "${tmpdirlist[@]}" | xargs -r rm -rf
+    set +x
 }
 
 
@@ -107,7 +117,7 @@ case "$1" in
         container_ip=$( ip_increment $IP_START $incr )
         container_name=pup${hostname}
         ;;
-    ls | list | show | info)
+    ls | ps | list | show | info)
         docker images --filter "label=groupID=$IMAGELABEL"
         docker ps --filter "label=groupID=$CONTAINERLABEL"
         exit
@@ -128,15 +138,21 @@ case "$1" in
     *) croak 'Unknown install type' ;;
 esac
 imagename="pup${pup_type}${hostname}"
-#dockerfile="${DOCKERFILE_BASE}${pup_type}"
 
-# Check if Docker is running on Windows
-if docker info --format '{{json .OperatingSystem}}' | grep -qi windows; then
-    readlink -e "$BASEDIR" | grep -q '^\/mnt\/[a-z]\/' \
-    || croak "Unable to determine drive letter for dir paths for docker on windows"
-    WINDRIVE=$( readlink -e "$BASEDIR" | cut -d/ -f3 )
-    [[ ${#WINDRIVE} -ne 1 ]] && croak "Windrive '$WINDRIVE' length is not 1"
-fi
+# TODO - Windows support is deprecated by adding --mount ... /sys/fs/cgroup to the container
+#      - Need more testing on windows for running systemd enabled CentOS image
+## Check if Docker is running on Windows
+#if docker info --format '{{json .OperatingSystem}}' | grep -qi windows; then
+#    readlink -e "$BASEDIR" | grep -q '^\/mnt\/[a-z]\/' \
+#    || croak "Unable to determine drive letter for dir paths for docker on windows"
+#    WINDRIVE=$( readlink -e "$BASEDIR" | cut -d/ -f3 )
+#    [[ ${#WINDRIVE} -ne 1 ]] && croak "Windrive '$WINDRIVE' length is not 1"
+#fi
+
+# Ensure Base Docker Image Exists
+[[ $( docker_search image "reference=$DOCKER_IMAGE_BASE" | wc -l ) -lt 1 ]] \
+&& { $BASEDIR/mk_base_image || croak 'Failed making base image'
+}
 
 # Build Docker Image
 image_exists $imagename "label=groupID=$IMAGELABEL" \
@@ -157,6 +173,8 @@ container_exists $container_name "label=groupID=$CONTAINERLABEL" \
 --name="$container_name" \
 --mount "Type=bind,Source=$(sanepath $SCRIPTDIR),Destination=/scripts,readonly" \
 --mount "Type=bind,Source=$(sanepath $BACKUPDIR),Destination=/backups,readonly" \
---label groupID=$CONTAINERLABEL \
+--mount "Type=bind,Source=/sys/fs/cgroup,Destination=/sys/fs/cgroup,readonly" \
+-v /tmp/$(mktemp -d):/run \
 --cap-add SYS_ADMIN \
+--label groupID=$CONTAINERLABEL \
 $imagename
