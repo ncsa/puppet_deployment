@@ -36,7 +36,7 @@ Enable and test environment isolation
     1. https://github.com/ncsa/pupmodver
     1. Remove extraneous environments (optional)
        ```
-       /scripts/rm_puppet_environment.sh
+       scripts/rm_puppet_environment.sh
        ```
     1. Make backup of puppet environments (optional)
        ```
@@ -59,28 +59,11 @@ Enable and test environment isolation
        ```
     1. Disable puppet profiles that can't be used in the virtual environment
        ```
-       envdir=$( puppet config print environmentpath )
-       now=$(date +%s)
-       for env in $(ls -d $envdir/*); do
-           manifestdir=$env/modules/role/manifests
-           find $manifestdir -mindepth 1 -maxdepth 1 -name '*.pp' \
-           | while read; do
-               bak=${REPLY}.$now
-               cp $REPLY $bak
-               awk '
-       /allow_qualys_scan/ && ! /#/ { print "#",$0; next }
-       /gpfs/              && ! /#/ { print "#",$0; next }
-       /telegraf/          && ! /#/ { print "#",$0; next }
-       /yum_client/        && ! /#/ { print "#",$0; next }
-       /slurm/             && ! /#/ { print "#",$0; next }
-       {print}
-       ' $bak > $REPLY
-           done
-       done
+       scripts/disable_non_vm_friendly_profiles.sh
        ```
     1. Enable puppet Environment Isolation
        ```
-       /root/puppet_deployment/scripts/update_environment_isolation.sh
+       scripts/update_environment_isolation.sh
        ```
 1. Setup Client Node
     1. (See quickstart above)
