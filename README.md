@@ -1,5 +1,11 @@
 # Usage
 
+## Docker
+1. MASTER
+   1. `doit.docker master`
+1. AGENT (relevant for testing in VM infrastructure)
+   1. `doit.docker agent [hostname.fqdn]`
+
 ## VM (or live host) quickstart
 1. COMMON (for both master and agent nodes)
    1. `yum -y install git; yum -y upgrade && reboot`
@@ -23,16 +29,6 @@
       ```
    1. puppet agent -t
 
-## Docker
-1. MASTER
-   1. `doit.docker master`
-1. AGENT (relevant for testing in VM infrastructure)
-   1. `doit.docker agent [hostname.fqdn]`
-
-NOTE: For testing in docker, need the following two things:
-1. an image that includes _systemd_ such as _centos/systemd_
-1. Add `--cap-add SYS_ADMIN` to the docker run command
-
 # Sample Scenario
 Enable and test environment isolation
 1. Setup Puppet Master
@@ -40,9 +36,7 @@ Enable and test environment isolation
     1. https://github.com/ncsa/pupmodver
     1. Remove extraneous environments (optional)
        ```
-       ls -d /etc/puppetlabs/code/environments/* \
-       | grep -v 'production\|test' \
-       | xargs -n1 -I{} find {} -delete
+       /scripts/rm_puppet_environment.sh
        ```
     1. Make backup of puppet environments (optional)
        ```
