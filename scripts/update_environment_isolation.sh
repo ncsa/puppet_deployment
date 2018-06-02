@@ -1,6 +1,7 @@
 #!/bin/bash
 
 PRG=$( basename $0 )
+PUPPET=/opt/puppetlabs/bin/puppet
 
 function die() {
     printf 'FATAL: %s\n' "$*" >&2
@@ -62,7 +63,7 @@ while :; do
 done
 
 # Set variables that are used below
-envpath=$( puppet config print environmentpath )
+envpath=$( $PUPPET config print environmentpath )
 
 # Check environment list
 if [[ ${#envlist[*]} -lt 1 ]]; then
@@ -88,6 +89,6 @@ for e in "${envlist[@]}" ; do
 
     # Generate resource types
     set -x
-    puppet generate types --force --environment $e
+    $PUPPET generate types --force --environment $e
     set +x
 done
