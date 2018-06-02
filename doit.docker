@@ -55,16 +55,16 @@ function iclean() {
 function pclean() {
     # Get tmpdirs
     format='{{range .Mounts}} {{if eq .Destination "/run"}} {{.Source}} {{end}} {{end}}'
-    tmpdirlist=( $( docker_search container "label=groupID=$CONTAINERLABEL" \
+    tmpdirlist=$( docker_search container "label=groupID=$CONTAINERLABEL" \
     | xargs -r -n1 docker inspect --format "$format" \
-    ) )
+    )
 
     # Clean docker containers / processes
     rm_containers "label=groupID=$CONTAINERLABEL"
 
     # Remove tmpdirs
     set -x
-    echo "${tmpdirlist[@]}" | xargs -r -n1 -I{} find {} -delete
+    echo $tmpdirlist | xargs -r -n1 -I{} find {} -delete
     set +x
 }
 
