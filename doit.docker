@@ -12,6 +12,7 @@ NETCIDR=172.18.0.0/24
 IP_START=172.18.0.2
 IMAGELABEL=5fbd64084033ec07
 CONTAINERLABEL=26b44bba0908e1fd
+TMPDIR=/tmp/testpupdocker
 
 
 pup_type=
@@ -63,7 +64,7 @@ function pclean() {
 
     # Remove tmpdirs
     set -x
-    echo "${tmpdirlist[@]}" | xargs -r rm -rf
+    echo "${tmpdirlist[@]}" | xargs -r -n1 -I{} find {} -delete
     set +x
 }
 
@@ -139,7 +140,9 @@ case "$1" in
 esac
 imagename="pup${pup_type}${hostname}"
 
-# TODO - Windows support is deprecated by adding --mount ... /sys/fs/cgroup to the container
+# TODO - Windows support is deprecated 
+#      - since adding --mount ... /sys/fs/cgroup to the container
+#      - and cap-add has no real equivalent (that I'm aware of)
 #      - Need more testing on windows for running systemd enabled CentOS image
 ## Check if Docker is running on Windows
 #if docker info --format '{{json .OperatingSystem}}' | grep -qi windows; then
@@ -163,7 +166,12 @@ image_exists $imagename "label=groupID=$IMAGELABEL" \
 # Verify custom network exists
 mk_user_net "$NETNAME"
 
+# Verify tmpdir exists
+mkdir -p "$TMPDIR"
+run_src="$( mktemp -d ${TMPDIR}/XXXXXX )"
+
 # Run Docker Container
+#-v $TMPDIR/$(mktemp -d):/run \
 container_exists $container_name "label=groupID=$CONTAINERLABEL" \
 && log "Container '$container_name' already exists, skipping container create" \
 || $action docker run -itd \
@@ -174,7 +182,7 @@ container_exists $container_name "label=groupID=$CONTAINERLABEL" \
 --mount "Type=bind,Source=$(sanepath $SCRIPTDIR),Destination=/scripts,readonly" \
 --mount "Type=bind,Source=$(sanepath $BACKUPDIR),Destination=/backups,readonly" \
 --mount "Type=bind,Source=/sys/fs/cgroup,Destination=/sys/fs/cgroup,readonly" \
--v /tmp/$(mktemp -d):/run \
+--mount "Type=bind,Source=$run_src,Destination=/run" \
 --cap-add SYS_ADMIN \
 --label groupID=$CONTAINERLABEL \
 $imagename
