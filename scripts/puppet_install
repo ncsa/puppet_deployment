@@ -6,7 +6,7 @@
 VERBOSE=1
 REPO_URL=https://yum.puppetlabs.com/puppetlabs-release-pc1-el-7.noarch.rpm
 PUPPET=/opt/puppetlabs/bin/puppet
-PUPPETSERVER=/opt/puppetlabs/bin/puppetserver
+PUPPETSRVR=/opt/puppetlabs/bin/puppetserver
 HOSTNAME=$(hostname)
 DNS_ALT_NAMES=$( hostname -I | awk '{print $1}' )
 BKUP_DIR=/backups
@@ -94,8 +94,15 @@ function puppet_install {
     || yum -y install $REPO_URL
 
     local pkglist
-    [[ "$build_type" == "master" ]] && pkglist=( puppetserver )
-    [[ "$build_type" == "agent" ]] && pkglist=( puppet-agent )
+    case "$build_type" in
+        master)
+            pkglist=( puppetserver )
+            ;;
+        agent)
+            pkglist=( puppet-agent )
+            ;;
+        *) croak "unknown build type '$build_type'"
+    esac
     yum -y install "${pkglist[@]}"
 }
 
@@ -226,11 +233,13 @@ function puppetserver {
     local action=$1
     case $action in
         *start|reload) 
-                $PUPPETSERVER $action
+                #$pupsrvc ensure=running
+                $PUPPETSRVR $action
                 is_puppetserver_running || croak 'puppetserver not running'
                 ;;
         stop)
-                $PUPPETSERVER $action
+                #$pupsrvc ensure=stopped
+                $PUPPETSRVR $action
                 is_puppetserver_running && croak 'puppetserver still running'
                 ;;
         *)
@@ -241,7 +250,7 @@ function puppetserver {
 
 function is_puppetserver_running {
     log "enter..."
-    lsof -i :8140 &>/dev/null || croak 'puppetserver failed to start'
+    lsof -i :8140 &>/dev/null
 }
 
 
@@ -376,4 +385,4 @@ agent_config
 ##site_manifest delete
 
 # Needed if running docker
-exec bash
+#exec bash
