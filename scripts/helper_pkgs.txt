@@ -4,6 +4,7 @@ iproute
 jq
 less
 lsof
+lvm2
 python2-pip
 python-virtualenv
 tree
