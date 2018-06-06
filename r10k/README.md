@@ -4,10 +4,11 @@
    1. List 3rd party modules
       1. Scan each module dir for metadata.json
       1. If metadata.json doesn't exist, module is local
-      1. Else, ```
+      1. Else,
+      ```
       find modules -name 'metadata.json' \
-      | xargs -r -n1 /root/jq '.source' \ #get __name__ and __source__ and __version__
-      # figure out how to make valid Puppetfile output
+      | xargs -r -n1 /root/jq '.source' \ #TODO get __name__ and __source__ and __version__
+      #TODO figure out how to make valid Puppetfile output
       ```
 1. Create __environment.conf__
 1. Create skeleton directory structure
