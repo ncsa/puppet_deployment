@@ -10,13 +10,14 @@
       1. Copy existing modules into __local_modules__
          1. Ignore anything listed in Puppetfile
          1. Ignore *role* and *profile*
-      1. Copy *role* and *profile* to __site__
-      1. `git init`
-      1. `git checkout -b production`
-      1. `git remote add origin git@git.ncsa.illinois.edu:lsst/puppet/control_repo.git`
-      1. `git add .`
-      1. `git commit -m "Initial Commit"`
-      1. `git push -u origin production`
+1. Create git repository
+   1. Copy *role* and *profile* to __site__
+   1. `git init`
+   1. `git checkout -b production`
+   1. `git remote add origin git@git.ncsa.illinois.edu:lsst/puppet/control_repo.git`
+   1. `git add .`
+   1. `git commit -m "Initial Commit"`
+   1. `git push -u origin production`
 
 # Create separate hiera repo
 Note: This whole chunk can be scripted
