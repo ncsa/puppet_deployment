@@ -29,10 +29,10 @@ while getopts ":m:vd" opt; do
       DEBUG=1
       ;;
     \?)
-      croak "Invalid option: -$OPTARG"
+      die "Invalid option: -$OPTARG"
       ;;
     :)
-      croak "Option -$OPTARG requires an argument."
+      die "Option -$OPTARG requires an argument."
       ;;
   esac
 done
@@ -47,7 +47,7 @@ fi
 
 
 # Check command line params
-[[ $# -lt 1 ]] && croak "Expected 1+ cmdline arguments, got '$#'"
+[[ $# -lt 1 ]] && die "Expected 1+ cmdline arguments, got '$#'"
 case "$1" in
     master)
         build_type=$1
@@ -55,12 +55,12 @@ case "$1" in
     agent)
         build_type=$1
         [[ -n "$2" ]] && export PUPCERTNAME="$2"
-        [[ -n "$PUPMASTER" ]] || croak "PUPMASTER is not set"
+        [[ -n "$PUPMASTER" ]] || die "PUPMASTER is not set"
         ;;
-    *) croak "Unknown install type '$1'" ;;
+    *) die "Unknown install type '$1'" ;;
 esac
 
 installer=$( readlink -e $( dirname $0 ) )/scripts/puppet_install
-[[ -f "$installer" ]] || croak "Not a file '$installer'"
-[[ -x "$installer" ]] || croak "Installer '$installer' is not executable"
+[[ -f "$installer" ]] || die "Not a file '$installer'"
+[[ -x "$installer" ]] || die "Installer '$installer' is not executable"
 $action $installer "$build_type" "$PUPCERTNAME"

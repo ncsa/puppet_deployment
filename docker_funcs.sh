@@ -46,7 +46,7 @@ function mk_user_net() {
         docker network create --driver bridge --subnet="$NETCIDR" "$netname"
         # Verify netname exists
         netname_exists "$netname" \
-        || croak "Unable to create network '$netname'"
+        || die "Unable to create network '$netname'"
     fi
 }
 
@@ -70,7 +70,7 @@ function image_exists() {
     # PARAMS
     #   name - String (Required) - imagename
     #   filter - String (Optional) - one or more filter strings
-    [[ $# -ge 2 ]] || croak 'Got $# params, expected 2 or more'
+    [[ $# -ge 2 ]] || die 'Got $# params, expected 2 or more'
     local name="$1"
     shift
     count=$( docker_search image "reference=$name" $* | wc -l )
@@ -104,7 +104,7 @@ function rm_images() {
     | awk '{print $2}' \
     | xargs -r docker rmi -f
     [[ $( docker_search images $* | wc -l ) -gt 0 ]] \
-    && croak "Unable to remove all images"
+    && die "Unable to remove all images"
 }
 
 
@@ -117,7 +117,7 @@ function rm_containers() {
     | xargs -r docker stop \
     | xargs -r docker rm
     [[ $( docker_search containers $* | wc -l ) -gt 0 ]] \
-    && croak "Unable to remove all containers"
+    && die "Unable to remove all containers"
 }
 
 
@@ -130,7 +130,7 @@ function docker_search() {
     #                         (ie: images, containers, etc.)
     #   filter
     #   - String (Required) - one or more filter strings
-    [[ $# -ge 2 ]] || croak 'Got $# params, expected 2 or more'
+    [[ $# -ge 2 ]] || die 'Got $# params, expected 2 or more'
     local kindofthing=$1
     shift
     local filters=()
@@ -143,12 +143,12 @@ function docker_search() {
             subcmd=ps
             ;;
         *)
-            croak "Unhandled docker \"thing\": '$kindofthing'"
+            die "Unhandled docker \"thing\": '$kindofthing'"
             ;;
     esac
     for f; do
         filters+=( '-f' "$f" )
     done
-    [[ ${#filters[*]} -gt 0 ]] || croak 'Got 0 filters, at least 1 filter is required'
+    [[ ${#filters[*]} -gt 0 ]] || die 'Got 0 filters, at least 1 filter is required'
     docker $subcmd -a -q "${filters[@]}"
 }

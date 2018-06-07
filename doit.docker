@@ -65,10 +65,10 @@ while getopts ":m:vd" opt; do
             DEBUG=1
             ;;
         \?)
-            croak "Invalid option: -$OPTARG"
+            die "Invalid option: -$OPTARG"
             ;;
         :)
-            croak "Option -$OPTARG requires an argument."
+            die "Option -$OPTARG requires an argument."
             ;;
     esac
 done
@@ -83,7 +83,7 @@ fi
 [[ $DEBUG -eq 1 ]] && set -x
 
 # Check command line params
-[[ $# -lt 1 ]] && croak "Expected 1+ cmdline arguments, got '$#'"
+[[ $# -lt 1 ]] && die "Expected 1+ cmdline arguments, got '$#'"
 case "$1" in
     master)
         pup_type=master
@@ -94,7 +94,7 @@ case "$1" in
     agent)
         pup_type=agent
         incr=$( docker images -q --filter label=groupID=$IMAGELABEL | wc -l )
-        [[ $incr -lt 1 ]] && croak 'No existing images found; trying to start an agent without a master?'
+        [[ $incr -lt 1 ]] && die 'No existing images found; trying to start an agent without a master?'
         hostname=agent$(printf "%02d" $incr)
         [[ -n "$2" ]] && hostname="$2"
         container_ip=$( ip_increment $IP_START $incr )
@@ -118,7 +118,7 @@ case "$1" in
         iclean
         exit
         ;;
-    *) croak 'Unknown install type' ;;
+    *) die 'Unknown install type' ;;
 esac
 imagename="pup${pup_type}${hostname}"
 
@@ -129,21 +129,21 @@ imagename="pup${pup_type}${hostname}"
 ## Check if Docker is running on Windows
 #if docker info --format '{{json .OperatingSystem}}' | grep -qi windows; then
 #    readlink -e "$BASEDIR" | grep -q '^\/mnt\/[a-z]\/' \
-#    || croak "Unable to determine drive letter for dir paths for docker on windows"
+#    || die "Unable to determine drive letter for dir paths for docker on windows"
 #    WINDRIVE=$( readlink -e "$BASEDIR" | cut -d/ -f3 )
-#    [[ ${#WINDRIVE} -ne 1 ]] && croak "Windrive '$WINDRIVE' length is not 1"
+#    [[ ${#WINDRIVE} -ne 1 ]] && die "Windrive '$WINDRIVE' length is not 1"
 #fi
 
 # Ensure Base Docker Image Exists
 [[ $( docker_search image "reference=$DOCKER_IMAGE_BASE" | wc -l ) -lt 1 ]] \
-&& { $BASEDIR/mk_base_image || croak 'Failed making base image'
+&& { $BASEDIR/mk_base_image || die 'Failed making base image'
 }
 
 # Build Docker Image
 image_exists $imagename "label=groupID=$IMAGELABEL" \
 && log "Image '$imagename' already exists, skipping image create" \
 || mk_dockerfile | $action docker build -t $imagename - \
-|| croak 'Docker build failed'
+|| die 'Docker build failed'
 
 # Verify custom network exists
 mk_user_net "$NETNAME"

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-function croak {
+function die {
     echo "ERROR (${BASH_SOURCE[1]} [${BASH_LINENO[0]}] ${FUNCNAME[1]}) $*"
     exit 99
 }

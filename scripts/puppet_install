@@ -17,7 +17,7 @@ REQUIRED_PKGS_AGENT=()
 # Global variables that are set or modified by functions below
 build_type=
 
-function croak {
+function die {
     echo "ERROR (${BASH_SOURCE[1]} [${BASH_LINENO[0]}] ${FUNCNAME[1]}) $*"
     exit 99
 }
@@ -52,7 +52,7 @@ function continue_or_exit() {
 
 function assert_root() {
     log "enter..."
-    [[ $EUID -eq 0 ]] || croak 'Must be root'
+    [[ $EUID -eq 0 ]] || die 'Must be root'
 }
 
 
@@ -63,7 +63,7 @@ function assert_valid_buildtype() {
             : #pass
             ;;
         *)
-            croak "Invalid build type: '$build_type'"
+            die "Invalid build type: '$build_type'"
             ;;
     esac
 }
@@ -73,7 +73,7 @@ function process_cmdline() {
     log "enter..."
     if [[ $# -lt 1 ]] ; then
         # Require PUPBUILDTYPE
-        [[ -z "$PUPBUILDTYPE" ]] && croak "No parameters given and PUPBUILDTYPE is empty"
+        [[ -z "$PUPBUILDTYPE" ]] && die "No parameters given and PUPBUILDTYPE is empty"
         build_type="$PUPBUILDTYPE"
         log "No cmdline parms found, using build_type=$build_type from env PUPBUILDTYPE"
     elif [[ $# -eq 1 ]] ; then
@@ -86,7 +86,7 @@ function process_cmdline() {
             *)
                 PUPCERTNAME="$1"
                 warn "cmdline parm is not a valid build_type, using as PUPCERTNAME"
-                [[ -z "$PUPBUILDTYPE" ]] && croak "unknown build_type and env var PUPBUILDTYPE is empty"
+                [[ -z "$PUPBUILDTYPE" ]] && die "unknown build_type and env var PUPBUILDTYPE is empty"
                 warn "using env var PUPBUILDTYPE for build_type"
                 build_type=$build_type
                 ;;
@@ -95,7 +95,7 @@ function process_cmdline() {
         build_type="$1"
         PUPCERTNAME="$2"
     else 
-        croak "Expected 0,1 or 2 arguments, got '$#'"
+        die "Expected 0,1 or 2 arguments, got '$#'"
     fi
     assert_valid_buildtype
     log "build_type=$build_type"
@@ -115,10 +115,10 @@ function install_required_pkgs() {
         agent)
             pkg_list+=( "${REQUIRED_PKGS_AGENT[@]}" )
             ;;
-        *) croak "unknown build type '$build_type'"
+        *) die "unknown build type '$build_type'"
     esac
-    [[ ${#pkg_list[@]} -gt 0 ]] || croak "empty pkg list"
-    yum install -y "${pkg_list[@]}" || croak "yum install returned non-zero"
+    [[ ${#pkg_list[@]} -gt 0 ]] || die "empty pkg list"
+    yum install -y "${pkg_list[@]}" || die "yum install returned non-zero"
 }
 
 
@@ -135,7 +135,7 @@ function puppet_install {
         agent)
             pkglist=( puppet-agent )
             ;;
-        *) croak "unknown build type '$build_type'"
+        *) die "unknown build type '$build_type'"
     esac
     yum -y install "${pkglist[@]}"
 }
@@ -170,7 +170,7 @@ ENDHERE
         agent)
             log "nothing to do for build_type: '$build_type'"
             ;;
-        *) croak "unknown build type '$build_type'"
+        *) die "unknown build type '$build_type'"
     esac
 }
 
@@ -181,7 +181,7 @@ function restore_config {
     case "$build_type" in
         master)
             fn=$( ls -t $BKUP_DIR/*_puppet_config.tar.gz | head -1 )
-            [[ -n $fn ]] || croak "Cant find a puppet_config file in backup dir '$BKUP_DIR'"
+            [[ -n $fn ]] || die "Cant find a puppet_config file in backup dir '$BKUP_DIR'"
             tar zxPf $fn -T - <<ENDHERE
 /etc/puppetlabs/puppet/puppet.conf
 /etc/puppetlabs/puppet/auth.conf
@@ -192,7 +192,7 @@ ENDHERE
         agent)
             log "nothing to do for build_type: '$build_type'"
             ;;
-        *) croak "unknown build type '$build_type'"
+        *) die "unknown build type '$build_type'"
     esac
 }
 
@@ -207,7 +207,7 @@ function adjust_config {
         agent)
             log "nothing to do for build_type: '$build_type'"
             ;;
-        *) croak "unknown build type '$build_type'"
+        *) die "unknown build type '$build_type'"
     esac
 }
 
@@ -215,7 +215,7 @@ function adjust_config {
 function restore_ca {
     log "enter..."
     fn=$( ls -t $BKUP_DIR/*_puppet_config.tar.gz | head -1 )
-    [[ -n $fn ]] || croak "Cant find a puppet_config file in backup dir '$BKUP_DIR'"
+    [[ -n $fn ]] || die "Cant find a puppet_config file in backup dir '$BKUP_DIR'"
     tar zxPf $fn -T - <<ENDHERE
 /etc/puppetlabs/puppet/ssl
 ENDHERE
@@ -226,7 +226,7 @@ ENDHERE
 function restore_db {
     log "enter..."
     fn=$( ls -t $BKUP_DIR/*_puppet_db.tar.gz | head -1 )
-    [[ -n $fn ]] || croak "Cant find a puppet_db file in backup dir '$BKUP_DIR'"
+    [[ -n $fn ]] || die "Cant find a puppet_db file in backup dir '$BKUP_DIR'"
     $PUPPET db import $fn
 }
 
@@ -252,7 +252,7 @@ function configure_ca {
         agent)
             log "nothing to do for build_type: '$build_type'"
             ;;
-        *) croak "unknown build type '$build_type'"
+        *) die "unknown build type '$build_type'"
     esac
 }
 
@@ -269,15 +269,15 @@ function puppetserver {
         *start|reload) 
                 #$pupsrvc ensure=running
                 $PUPPETSRVR $action
-                is_puppetserver_running || croak 'puppetserver not running'
+                is_puppetserver_running || die 'puppetserver not running'
                 ;;
         stop)
                 #$pupsrvc ensure=stopped
                 $PUPPETSRVR $action
-                is_puppetserver_running && croak 'puppetserver still running'
+                is_puppetserver_running && die 'puppetserver still running'
                 ;;
         *)
-                croak "unknown action '$action'"
+                die "unknown action '$action'"
     esac
 }
 
@@ -314,7 +314,7 @@ function site_manifest {
         delete)
                 rm $fn
                 ;;
-        *) croak "unknown action '$action'"
+        *) die "unknown action '$action'"
                 ;;
     esac
 }
@@ -353,7 +353,7 @@ classes:
     - puppetdb::master::config
 ENDHERE
                 ;;
-        *) croak "unknown action '$action'"
+        *) die "unknown action '$action'"
                 ;;
     esac
 }
@@ -371,7 +371,7 @@ function agent_config {
             [[ -n "$PUPCERTNAME" ]] && $PUPPET config set certname "$PUPCERTNAME"
             ;;
         *)
-            croak "Unknown build_type '$build_type'"
+            die "Unknown build_type '$build_type'"
     esac
 }
 
@@ -386,7 +386,7 @@ function agent_run {
             $PUPPET agent --test
             ;;
         *)
-            croak "Unknown build_type '$build_type'"
+            die "Unknown build_type '$build_type'"
     esac
 }
 
