@@ -4,16 +4,6 @@ BASEPATH=/root/puppet_deployment
 INCLUDES=( \
     $BASEPATH/common_funcs.sh
 )
-VERBOSE=0
-DEBUG=0
-ALWAYSYES=0
-
-MODULES_PATH=/etc/puppetlabs/code/environments/production/modules
-GIT_URL_BASE=git@git.ncsa.illinois.edu:lsst/puppet
-OUTPUT_PATH=/root
-CONTROL_REPO_NAME=control_repo
-CONFIG_VERSION_URL=https://raw.githubusercontent.com/voxpupuli/puppet-r10k/master/files/config_version.sh
-HIERA_REPO_NAME=hiera
 
 for f in "${INCLUDES[@]}"; do
     [[ -f "$f" ]] || { echo "Cant include file '$f'"; exit 1
@@ -21,9 +11,85 @@ for f in "${INCLUDES[@]}"; do
     source  "$f"
 done
 
+
+###
+# Process cmdline
+###
+VERBOSE=0
+DEBUG=0
+ALWAYSYES=0
+MODULES_PATH=/etc/puppetlabs/code/environments/production/modules
+HIERA_DATA_PATH=/etc/puppetlabs/code/environments/production/hieradata
+GIT_URL_BASE=git@git.ncsa.illinois.edu:lsst/puppet
+CONFIG_VERSION_URL=https://raw.githubusercontent.com/voxpupuli/puppet-r10k/master/files/config_version.sh
+OUTPUT_PATH=/root
+CONTROL_REPO_NAME=control
+HIERA_REPO_NAME=hiera
+while :; do
+    case "$1" in
+        -h|-\?|--help)
+            echo "Usage: ${0##*/} [OPTIONS]"
+            echo "Options:"
+            echo "    -C CONTROL_REPO_NAME (default: '$CONTROL_REPO_NAME')"
+            echo "    -d                   (enable debug mode)"
+            echo "    -D HIERA_DATA_PATH   (default: '$HIERA_DATA_PATH')"
+            echo "    -H HIERA_REPO_NAME   (default: '$HIERA_REPO_NAME')"
+            echo "    -M MODULES_PATH      (default: '$MODULES_PATH')"
+            echo "    -O OUTPUT_PATH       (default: '$OUTPUT_PATH')"
+            echo "    -v                   (enable verbose mode)"
+            echo "    -y                   (answer YES to questions ... ie: delete local output dirs)"
+            exit
+            ;;
+        -C)
+            CONTROL_REPO_NAME=$OPTARG
+            shift
+            ;;
+        -d)
+            VERBOSE=1
+            DEBUG=1
+            ;;
+        -D)
+            HIERA_DATA_PATH=$OPTARG
+            shift
+            ;;
+        -H)
+            HIERA_REPO_NAME=$OPTARG
+            shift
+            ;;
+        -M)
+            MODULES_PATH=$OPTARG
+            shift
+            ;;
+        -O)
+            OUTPUT_PATH=$OPTARG
+            shift
+            ;;
+        -v)
+            VERBOSE=1
+            ;;
+        -y)
+            ALWAYSYES=1
+            ;;
+        --)
+            shift
+            break
+            ;;
+        -?*)
+            die "Invalid option: -$1"
+            ;;
+        *)
+            break
+            ;;
+    esac
+    shift
+done
+
+
 ###
 # Functions
 ###
+
+
 public_module_names_versions() {
     log "enter..."
     [[ "$DEBUG" -eq 1 ]] && set -x
@@ -87,6 +153,21 @@ ENDHERE
 }
 
 
+mk_hiera_conf() {
+    #make hiera config
+    log "enter..."
+    [[ "$DEBUG" -eq 1 ]] && set -x
+    local repopath="$OUTPUT_PATH/$CONTROL_REPO_NAME"
+    >"$repopath"/hiera.yaml cat <<ENDHERE
+---
+version: 5
+defaults:
+    datadir: data
+    data_hash: yaml_data
+ENDHERE
+}
+
+
 
 mk_config_version() {
     #get puppt config_version script
@@ -112,7 +193,7 @@ cp_local_modules() {
         metafn="$dirpath"/metadata.json
         # if no metadata, assume it's a local module
         [[ -f "$metafn" ]] || {
-            rsync_module "$dirpath" "$repopath"/site
+            cpdir "$dirpath" "$repopath"/site/
             continue
         }
         # if name from metadata.json is IN Puppetfile, skip
@@ -122,14 +203,14 @@ cp_local_modules() {
         rc=$?
         case $rc in
             0) continue;; #grep found a positive match, skip this module
-            1) rsync_module "$dirpath" "$repopath"/site ;;
+            1) cpdir "$dirpath" "$repopath"/site/ ;;
             2) die "during grep for '$external_name' in Puppetfile '$pupfn'"
         esac
     done
 }
 
 
-rsync_module() {
+cpdir() {
     # Copy module directory to target location
     # PARAMS:
     #   src : String : path to module directory
@@ -144,16 +225,17 @@ rsync_module() {
 }
 
 
-commit_control_repo() {
+_commit_repo() {
     log "enter..."
     [[ "$DEBUG" -eq 1 ]] && set -x
-    local repopath="$OUTPUT_PATH/$CONTROL_REPO_NAME"
-    local remote_url="$GIT_URL_BASE/$CONTROL_REPO_NAME".git
+    local repopath="$1"
+    local remote_url="$2"
+    [[ -d "$repopath" ]] || die "Repopath '$repopath' directory not found"
     local rc
     # fail if remote repo doesn't exist
     git ls-remote -h "$remote_url" &>/dev/null
     rc=$?
-    [[ "$rc" -ne 0 ]] && die "Remote git repo doesn't exist."
+    [[ "$rc" -ne 0 ]] && die "Remote git repo doesnt exist: '$remote_url'"
     (
         cd "$repopath"
         git init
@@ -163,47 +245,57 @@ commit_control_repo() {
         git commit -m 'Initial commit'
         git push -u origin production
     )
-    echo $(pwd)
 }
 
 
-###
-# Process cmdline
-###
-# Process cmdline options
-while getopts ":c:h:m:o:dvy" opt; do
-    case $opt in
-        c)
-            CONTROL_REPO_NAME=$OPTARG
-            ;;
-        h)
-            HIERA_REPO_NAME=$OPTARG
-            ;;
-        m)
-            MODULES_PATH=$OPTARG
-            ;;
-        o)
-            OUTPUT_PATH=$OPTARG
-            ;;
-        y)
-            ALWAYSYES=1
-            ;;
-        v)
-            VERBOSE=1
-            ;;
-        d)
-            VERBOSE=1
-            DEBUG=1
-            ;;
-        \?)
-            die "Invalid option: -$OPTARG"
-            ;;
-        :)
-            die "Option -$OPTARG requires an argument."
-            ;;
-    esac
-done
-shift $((OPTIND-1))
+commit_control_repo() {
+    log "enter..."
+    [[ "$DEBUG" -eq 1 ]] && set -x
+    local repopath="$OUTPUT_PATH/$CONTROL_REPO_NAME"
+    local remote_url="$GIT_URL_BASE/$CONTROL_REPO_NAME".git
+    _commit_repo "$repopath" "$remote_url" \
+    || die "Failed to commit control repo"
+}
+
+
+mk_hiera_repo_skeleton() {
+    log "enter..."
+    [[ $DEBUG -gt 0 ]] && set -x
+    local repopath="$OUTPUT_PATH/$HIERA_REPO_NAME"
+    if [[ -d "$repopath" ]] ; then
+        if [[ "$ALWAYSYES" -eq 1 ]] ; then
+            : #pass
+        elif ask_yes_no "Directory exists, ok to delete: ['$repopath'] ?" ; then
+            : #pass
+        else
+            die "Directory exists: ['$repopath']"
+        fi
+        find "$repopath" -delete
+    fi
+    mkdir -p "$repopath"
+}
+
+
+cp_hieradata() {
+    # Copy legacy hieradata into unique hiera repo
+    log "enter..."
+    [[ "$DEBUG" -eq 1 ]] && set -x
+    [[ -d "$HIERA_DATA_PATH" ]] || die "Hiera data path '$HIERA_DATA_PATH' doesnt exist"
+    local repopath="$OUTPUT_PATH/$HIERA_REPO_NAME"
+    [[ -d "$repopath" ]] || die "Hiera repo dir '$repodir' doesnt exist"
+    cpdir "$HIERA_DATA_PATH"/ "$repopath" \
+    || die "failed to copy hieradata from '$HIERA_DATA_PATH' to '$repopath'"
+}
+
+
+commit_hiera_repo() {
+    log "enter..."
+    [[ "$DEBUG" -eq 1 ]] && set -x
+    local repopath="$OUTPUT_PATH/$HIERA_REPO_NAME"
+    local remote_url="$GIT_URL_BASE/$HIERA_REPO_NAME".git
+    _commit_repo "$repopath" "$remote_url" \
+    || die "Failed to commit hiera repo"
+}
 
 [[ "$DEBUG" -eq 1 ]] && set -x
 
@@ -211,18 +303,17 @@ shift $((OPTIND-1))
 ###
 # Populate control_repo
 ###
-#mk_control_repo_skeleton
-#mk_puppetfile
-#mk_environment_conf
-#mk_config_version
-#cp_local_modules
+mk_control_repo_skeleton
+mk_puppetfile
+mk_environment_conf
+mk_hiera_conf
+mk_config_version
+cp_local_modules
 commit_control_repo
-
-#create git repository & push to remote
-# TODO - how to check for existing repo? 
-# TODO - remove exising repo?
 
 ###
 # Populate hiera repo
 ###
-
+mk_hiera_repo_skeleton
+cp_hieradata
+commit_hiera_repo
