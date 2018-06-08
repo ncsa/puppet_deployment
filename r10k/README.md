@@ -3,6 +3,6 @@
    1. Give `-h` option for help message
 
 # Setup R10K
-1. Edit `02_r10k_init.pp`
+1. Edit `r10k_init.pp`
    1. Ensure remote git URL's are correct
 1. `./02_r10k_init.sh`
