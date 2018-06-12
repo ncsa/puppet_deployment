@@ -141,42 +141,22 @@ puppet_install() {
 }
 
 
-restore_core() {
-    log "enter..."
-    case "$build_type" in
-        master)
-            fn=$( ls -t $BKUP_DIR/*_puppet_config.tar.gz | head -1 )
-            if [[ -z $fn ]] ; then
-                echo "Cant find a puppet_config file in backup dir '$BKUP_DIR'"
-                echo "This step will be skipped"
-                continue_or_exit 
-            else
-                tar zxPf $fn -T - <<ENDHERE
-/etc/puppetlabs/code
-/etc/puppetlabs/puppetserver
-ENDHERE
-            fi
-            ;;
-        agent)
-            log "nothing to do for build_type: '$build_type'"
-            ;;
-        *) die "unknown build type '$build_type'"
-    esac
+get_bkup_src() {
+    ls -t $BKUP_DIR/*_puppet_config.tar.gz | head -1
 }
 
 
-# separate from restore_core in case there is a need for different config
 restore_config() {
     log "enter..."
     case "$build_type" in
         master)
-            fn=$( ls -t $BKUP_DIR/*_puppet_config.tar.gz | head -1 )
-            [[ -n $fn ]] || die "Cant find a puppet_config file in backup dir '$BKUP_DIR'"
-            tar zxPf $fn -T - <<ENDHERE
-/etc/puppetlabs/puppet/puppet.conf
-/etc/puppetlabs/puppet/auth.conf
-/etc/puppetlabs/puppet/autosign.conf
-/etc/puppetlabs/puppet/hiera.yaml
+            fn=$( get_bkup_src )
+            [[ -z "$fn" ]] && die "Cant find a puppet backup"
+            tar zxPf "$fn" --overwrite -T - <<ENDHERE
+/etc/puppetlabs/puppet/*.conf
+/etc/puppetlabs/puppet/*.yaml
+/etc/puppetlabs/puppetserver/
+/etc/puppetlabs/code/config/
 ENDHERE
             ;;
         agent)
@@ -187,12 +167,15 @@ ENDHERE
 }
 
 
-adjust_config() {
+disable_puppetdb() {
     log "enter..."
     case "$build_type" in
         master)
             $PUPPET config set storeconfigs false --section master
             $PUPPET config set reports store --section master
+            for f in puppetdb.conf routes.yaml; do
+                rm /etc/puppetlabs/puppet/"$f"
+            done
             ;;
         agent)
             log "nothing to do for build_type: '$build_type'"
@@ -202,22 +185,24 @@ adjust_config() {
 }
 
 
-restore_ca() {
+restore_environments() {
     log "enter..."
-    fn=$( ls -t $BKUP_DIR/*_puppet_config.tar.gz | head -1 )
-    [[ -n $fn ]] || die "Cant find a puppet_config file in backup dir '$BKUP_DIR'"
-    tar zxPf $fn -T - <<ENDHERE
-/etc/puppetlabs/puppet/ssl
+    fn=$( get_bkup_src )
+    [[ -z "$fn" ]] && die "Cant find a puppet backup"
+    find /etc/puppetlabs/code/environments -delete
+    tar zxPf "$fn" --overwrite -T - <<ENDHERE
+/etc/puppetlabs/code/environments
 ENDHERE
-
 }
 
 
-restore_db() {
+restore_ca() {
     log "enter..."
-    fn=$( ls -t $BKUP_DIR/*_puppet_db.tar.gz | head -1 )
-    [[ -n $fn ]] || die "Cant find a puppet_db file in backup dir '$BKUP_DIR'"
-    $PUPPET db import $fn
+    fn=$( get_bkup_src )
+    [[ -z "$fn" ]] && die "Cant find a puppet backup"
+    tar zxPf "$fn" --overwrite -T - <<ENDHERE
+/etc/puppetlabs/puppet/ssl
+ENDHERE
 }
 
 
@@ -328,10 +313,11 @@ assert_root
 process_cmdline $*
 install_required_pkgs
 puppet_install
-#restore_core
+
 #restore_config
-#adjust_config
+#disable_puppetdb
 #restore_ca
+
 #configure_ca
 #puppetserver start
 #agent_config
