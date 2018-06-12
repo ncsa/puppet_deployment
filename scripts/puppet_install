@@ -17,24 +17,24 @@ REQUIRED_PKGS_AGENT=()
 # Global variables that are set or modified by functions below
 build_type=
 
-function die {
+die() {
     echo "ERROR (${BASH_SOURCE[1]} [${BASH_LINENO[0]}] ${FUNCNAME[1]}) $*"
     exit 99
 }
 
 
-function warn() {
+warn() {
     echo "WARN (${BASH_SOURCE[1]} [${BASH_LINENO[0]}] ${FUNCNAME[1]}) $*"
 }
 
 
-function log() {
+log() {
     [[ $VERBOSE -ne 1 ]] && return
     echo "INFO (${BASH_SOURCE[1]} [${BASH_LINENO[0]}] ${FUNCNAME[1]}) $*"
 }
 
 
-function continue_or_exit() {
+continue_or_exit() {
     [[ -n "$1" ]] && echo "$1"
     shift
     local pause=60
@@ -50,13 +50,13 @@ function continue_or_exit() {
 }
 
 
-function assert_root() {
+assert_root() {
     log "enter..."
     [[ $EUID -eq 0 ]] || die 'Must be root'
 }
 
 
-function assert_valid_buildtype() {
+assert_valid_buildtype() {
     # Check build_type
     case "$build_type" in
         master|agent)
@@ -69,7 +69,7 @@ function assert_valid_buildtype() {
 }
 
 
-function process_cmdline() {
+process_cmdline() {
     log "enter..."
     if [[ $# -lt 1 ]] ; then
         # Require PUPBUILDTYPE
@@ -105,7 +105,7 @@ function process_cmdline() {
 }
 
 
-function install_required_pkgs() {
+install_required_pkgs() {
     log "enter..."
     local pkg_list=( "${REQUIRED_PKGS_COMMON[@]}" )
     case "$build_type" in
@@ -122,7 +122,7 @@ function install_required_pkgs() {
 }
 
 
-function puppet_install {
+puppet_install() {
     log "enter..."
     ls /etc/yum.repos.d/puppetlabs*.repo &>/dev/null \
     || yum -y install $REPO_URL
@@ -141,17 +141,7 @@ function puppet_install {
 }
 
 
-function puppetdb_install {
-    log "enter..."
-    ls /etc/yum.repos.d/puppetlabs*.repo &>/dev/null \
-    || yum -y install $REPO_URL
-
-    $PUPPET module install -i /etc/puppetlabs/code/modules puppetlabs-puppetdb
-    yum -y install puppet-client-tools
-}
-
-
-function restore_core {
+restore_core() {
     log "enter..."
     case "$build_type" in
         master)
@@ -176,7 +166,7 @@ ENDHERE
 
 
 # separate from restore_core in case there is a need for different config
-function restore_config {
+restore_config() {
     log "enter..."
     case "$build_type" in
         master)
@@ -197,7 +187,7 @@ ENDHERE
 }
 
 
-function adjust_config {
+adjust_config() {
     log "enter..."
     case "$build_type" in
         master)
@@ -212,7 +202,7 @@ function adjust_config {
 }
 
 
-function restore_ca {
+restore_ca() {
     log "enter..."
     fn=$( ls -t $BKUP_DIR/*_puppet_config.tar.gz | head -1 )
     [[ -n $fn ]] || die "Cant find a puppet_config file in backup dir '$BKUP_DIR'"
@@ -223,7 +213,7 @@ ENDHERE
 }
 
 
-function restore_db {
+restore_db() {
     log "enter..."
     fn=$( ls -t $BKUP_DIR/*_puppet_db.tar.gz | head -1 )
     [[ -n $fn ]] || die "Cant find a puppet_db file in backup dir '$BKUP_DIR'"
@@ -231,7 +221,7 @@ function restore_db {
 }
 
 
-function configure_ca {
+configure_ca() {
     log "enter..."
     case "$build_type" in
         master)
@@ -257,7 +247,7 @@ function configure_ca {
 }
 
 
-function puppetserver {
+puppetserver() {
     log "enter..."
     [[ "$build_type" != 'master' ]] && {
         log "nothing to do for build_type: '$build_type'"
@@ -282,13 +272,13 @@ function puppetserver {
 }
 
 
-function is_puppetserver_running {
+is_puppetserver_running() {
     log "enter..."
     lsof -i :8140 &>/dev/null
 }
 
 
-function create_autosign {
+create_autosign() {
     log "enter..."
     fn=$( $PUPPET config print autosign )
     [[ -f $fn ]] && return 0
@@ -299,67 +289,7 @@ ENDHERE
 }
 
 
-function site_manifest {
-    # TODO - would this be different for master vs. agent?
-    log "enter..."
-    action=$1
-    fn=$( $PUPPET config print manifest )/site.pp
-    case $action in
-        dummy)
-                echo "notify{\"Nodename \${trusted['certname']}\":}" > $fn
-                ;;
-        update)
-                echo "hiera_include('classes')" >> $fn
-                ;;
-        delete)
-                rm $fn
-                ;;
-        *) die "unknown action '$action'"
-                ;;
-    esac
-}
-
-
-function enc_create {
-    log "enter..."
-    local section
-    case $build_type in
-        master)
-            section=master
-            ;;
-        agent)
-            section=user
-            ;;
-    esac
-    $PUPPET config set node_terminus exec --section $section
-    $PUPPET config set external_nodes --section $section
-}
-
-
-function yaml_manifest {
-    log "enter..."
-    action=$1
-    envpath=$( $PUPPET config print environmentpath | cut -d: -f1 )
-    env=$( $PUPPET config print environment )
-    dir=$envpath/$env/hieradata/nodes
-    mkdir -p $dir
-    fn=$dir/${HOSTNAME}.yaml
-    case $action in
-        create)
-                cat >$fn <<ENDHERE
----
-classes: 
-    - puppetdb
-    - puppetdb::master::config
-ENDHERE
-                ;;
-        *) die "unknown action '$action'"
-                ;;
-    esac
-}
-
-
-function agent_config {
+agent_config() {
     log "enter..."
     case $build_type in
         master)
@@ -376,7 +306,7 @@ function agent_config {
 }
 
 
-function agent_run {
+agent_run() {
     log "enter..."
     case $build_type in
         master)
@@ -398,25 +328,11 @@ assert_root
 process_cmdline $*
 install_required_pkgs
 puppet_install
-restore_core
-restore_config
-adjust_config
+#restore_core
+#restore_config
+#adjust_config
 #restore_ca
-configure_ca
-#site_manifest dummy
-#enc_create
-puppetserver start
-agent_config
+#configure_ca
+#puppetserver start
+#agent_config
 #agent_run
-
-# puppetdb has stability issues, not using anymore
-#puppetdb_install
-
-#site_manifest update
-#yaml_manifest create
-#puppetserver restart
-#agent_run
-##site_manifest delete
-
-# Needed if running docker
-#exec bash
