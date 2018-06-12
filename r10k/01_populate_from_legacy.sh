@@ -41,7 +41,7 @@ while :; do
             exit
             ;;
         -C)
-            CONTROL_REPO_NAME=$OPTARG
+            CONTROL_REPO_NAME=$2
             shift
             ;;
         -d)
@@ -49,19 +49,19 @@ while :; do
             DEBUG=1
             ;;
         -D)
-            HIERA_DATA_PATH=$OPTARG
+            HIERA_DATA_PATH=$2
             shift
             ;;
         -H)
-            HIERA_REPO_NAME=$OPTARG
+            HIERA_REPO_NAME=$2
             shift
             ;;
         -M)
-            MODULES_PATH=$OPTARG
+            MODULES_PATH=$2
             shift
             ;;
         -O)
-            OUTPUT_PATH=$OPTARG
+            OUTPUT_PATH=$2
             shift
             ;;
         -v)
