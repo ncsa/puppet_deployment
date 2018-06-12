@@ -301,6 +301,12 @@ commit_hiera_repo() {
 
 
 ###
+# Check dependencies
+###
+which jq &>/dev/null || die "required program 'jq' not found"
+
+
+###
 # Populate control_repo
 ###
 mk_control_repo_skeleton
