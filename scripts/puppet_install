@@ -1,37 +1,116 @@
 #!/bin/bash
 
-#set -x
+BASEPATH=/root/puppet_deployment
+INCLUDES=( \
+    $BASEPATH/common_funcs.sh
+)
+
+for f in "${INCLUDES[@]}"; do
+    [[ -f "$f" ]] || { echo "Cant include file '$f'"; exit 1
+    }
+    source  "$f"
+done
 
 # Global variables (in all caps) are set once here and never changed
-VERBOSE=1
-REPO_URL=https://yum.puppetlabs.com/puppetlabs-release-pc1-el-7.noarch.rpm
 PUPPET=/opt/puppetlabs/bin/puppet
 PUPPETSRVR=/opt/puppetlabs/bin/puppetserver
 HOSTNAME=$(hostname)
 DNS_ALT_NAMES=$( hostname -I | awk '{print $1}' )
-BKUP_DIR=/backups
 REQUIRED_PKGS_COMMON=( bind-utils lsof )
 REQUIRED_PKGS_MASTER=( PyYAML )
 REQUIRED_PKGS_AGENT=()
 
+# Command line options (defaults)
+VERBOSE=0
+DEBUG=0
+REPO_URL=https://yum.puppetlabs.com/puppetlabs-release-pc1-el-7.noarch.rpm
+BKUP_DIR=/backups
+BUILD_TYPE="$PUPBUILDTYPE"           #master | agent (allow to be set by env var)
+CONFIG_TYPE="$PUPCONFIGTYPE"         #new | restore | r10k (allow env var)
+AGENT_CERT_NAME="$PUPCERTNAME"       #allow override hostname
+
+
+process_cmdline() {
+while :; do
+    case "$1" in
+        -h|-\?|--help)
+            echo "Usage: ${0##*/} [OPTIONS]"
+            echo "Options:"
+            echo "    -a                    (build an agent)"
+            echo "    -A <AgentCertname>    (override certname, defaults to hostname)"
+            echo "    -d                    (enable debug mode)"
+            echo "    -m                    (build a master)"
+            echo "    -M <new|restore|r10k> (how to configure puppet master)"
+            echo "    -v                    (enable verbose mode)"
+            exit
+            ;;
+        -a)
+            BUILD_TYPE=agent
+            ;;
+        -A)
+            AGENT_CERT_NAME="$2"
+            shift
+            ;;
+        -d)
+            VERBOSE=1
+            DEBUG=1
+            ;;
+        -m)
+            BUILD_TYPE=master
+            ;;
+        -M)
+            CONFIG_TYPE="$2"
+            shift
+            ;;
+        -v)
+            VERBOSE=1
+            ;;
+        --)
+            shift
+            break
+            ;;
+        -?*)
+            die "Invalid option: -$1"
+            ;;
+        *)
+            break
+            ;;
+    esac
+    shift
+done
+
+# assert valid build_type
+case "$BUILD_TYPE" in
+    master)
+        # check config_type ... only relevant if build_type is MASTER
+        if [[ " new restore r10k " =~ " $CONFIG_TYPE " ]]; then
+        else
+            die "Missing or invalid config type: '$CONFIG_TYPE' for puppet master"
+        fi
+        ;;
+    agent)
+        : #pass
+        ;;
+    *)
+        die "Invalid build type '$BUILD_TYPE'"
+        ;;
+esac
+}
+
+
+
+
+###
+# Functions
+###
+
+
+
+
+
 # Global variables that are set or modified by functions below
 build_type=
 
-die() {
-    echo "ERROR (${BASH_SOURCE[1]} [${BASH_LINENO[0]}] ${FUNCNAME[1]}) $*"
-    exit 99
-}
-
-
-warn() {
-    echo "WARN (${BASH_SOURCE[1]} [${BASH_LINENO[0]}] ${FUNCNAME[1]}) $*"
-}
-
-
-log() {
-    [[ $VERBOSE -ne 1 ]] && return
-    echo "INFO (${BASH_SOURCE[1]} [${BASH_LINENO[0]}] ${FUNCNAME[1]}) $*"
-}
 
 
 continue_or_exit() {
@@ -56,66 +135,20 @@ assert_root() {
 }
 
 
-assert_valid_buildtype() {
-    # Check build_type
-    case "$build_type" in
-        master|agent)
-            : #pass
-            ;;
-        *)
-            die "Invalid build type: '$build_type'"
-            ;;
-    esac
-}
 
 
-process_cmdline() {
-    log "enter..."
-    if [[ $# -lt 1 ]] ; then
-        # Require PUPBUILDTYPE
-        [[ -z "$PUPBUILDTYPE" ]] && die "No parameters given and PUPBUILDTYPE is empty"
-        build_type="$PUPBUILDTYPE"
-        log "No cmdline parms found, using build_type=$build_type from env PUPBUILDTYPE"
-    elif [[ $# -eq 1 ]] ; then
-        # Check param for valid build type
-        case "$1" in
-            master|agent)
-                build_type="$1"
-                log "cmdline parm looks like a build_type, setting build_type=$build_type"
-                ;;
-            *)
-                PUPCERTNAME="$1"
-                warn "cmdline parm is not a valid build_type, using as PUPCERTNAME"
-                [[ -z "$PUPBUILDTYPE" ]] && die "unknown build_type and env var PUPBUILDTYPE is empty"
-                warn "using env var PUPBUILDTYPE for build_type"
-                build_type=$build_type
-                ;;
-        esac
-    elif [[ $# -eq 2 ]] ; then
-        build_type="$1"
-        PUPCERTNAME="$2"
-    else 
-        die "Expected 0,1 or 2 arguments, got '$#'"
-    fi
-    assert_valid_buildtype
-    log "build_type=$build_type"
-    [[ -n "$PUPCERTNAME" ]] \
-    && log "PUPCERTNAME=$PUPCERTNAME" \
-    || log "HOSTNAME=$HOSTNAME"
-}
 
 
 install_required_pkgs() {
     log "enter..."
     local pkg_list=( "${REQUIRED_PKGS_COMMON[@]}" )
-    case "$build_type" in
+    case "$BUILD_TYPE" in
         master)
             pkg_list+=( "${REQUIRED_PKGS_MASTER[@]}" )
             ;;
         agent)
             pkg_list+=( "${REQUIRED_PKGS_AGENT[@]}" )
             ;;
-        *) die "unknown build type '$build_type'"
     esac
     [[ ${#pkg_list[@]} -gt 0 ]] || die "empty pkg list"
     yum install -y "${pkg_list[@]}" || die "yum install returned non-zero"
@@ -128,14 +161,13 @@ puppet_install() {
     || yum -y install $REPO_URL
 
     local pkglist
-    case "$build_type" in
+    case "$BUILD_TYPE" in
         master)
             pkglist=( puppetserver )
             ;;
         agent)
             pkglist=( puppet-agent )
             ;;
-        *) die "unknown build type '$build_type'"
     esac
     yum -y install "${pkglist[@]}"
 }
@@ -148,7 +180,7 @@ get_bkup_src() {
 
 restore_config() {
     log "enter..."
-    case "$build_type" in
+    case "$BUILD_TYPE" in
         master)
             fn=$( get_bkup_src )
             [[ -z "$fn" ]] && die "Cant find a puppet backup"
@@ -160,16 +192,15 @@ restore_config() {
 ENDHERE
             ;;
         agent)
-            log "nothing to do for build_type: '$build_type'"
+            log "nothing to do for build_type: '$BUILD_TYPE'"
             ;;
-        *) die "unknown build type '$build_type'"
     esac
 }
 
 
 disable_puppetdb() {
     log "enter..."
-    case "$build_type" in
+    case "$BUILD_TYPE" in
         master)
             $PUPPET config set storeconfigs false --section master
             $PUPPET config set reports store --section master
@@ -178,9 +209,9 @@ disable_puppetdb() {
             done
             ;;
         agent)
-            log "nothing to do for build_type: '$build_type'"
+            log "nothing to do for build_type: '$BUILD_TYPE'"
             ;;
-        *) die "unknown build type '$build_type'"
+        *) die "unknown build type '$BUILD_TYPE'"
     esac
 }
 
@@ -208,7 +239,7 @@ ENDHERE
 
 configure_ca() {
     log "enter..."
-    case "$build_type" in
+    case "$BUILD_TYPE" in
         master)
             [[ -d /etc/puppetlabs/puppet/ssl/ca ]] && {
                 log 'CA already configured, skipping.'
@@ -225,17 +256,17 @@ configure_ca() {
             $PUPPET certificate find $HOSTNAME --ca-location local &>/dev/null
             ;;
         agent)
-            log "nothing to do for build_type: '$build_type'"
+            log "nothing to do for build_type: '$BUILD_TYPE'"
             ;;
-        *) die "unknown build type '$build_type'"
+        *) die "unknown build type '$BUILD_TYPE'"
     esac
 }
 
 
 puppetserver() {
     log "enter..."
-    [[ "$build_type" != 'master' ]] && {
-        log "nothing to do for build_type: '$build_type'"
+    [[ "$BUILD_TYPE" != 'master' ]] && {
+        log "nothing to do for build_type: '$BUILD_TYPE'"
         return 0
     }
     #local pupsrvc="$PUPPET resource service puppetserver"
@@ -276,9 +307,9 @@ ENDHERE
 
 agent_config() {
     log "enter..."
-    case $build_type in
+    case $BUILD_TYPE in
         master)
-            log "nothing to do for build_type: '$build_type'"
+            log "nothing to do for build_type: '$BUILD_TYPE'"
             ;;
         agent)
             #set custom puppet server (if environment variable PUPMASTER exists)
@@ -286,22 +317,22 @@ agent_config() {
             [[ -n "$PUPCERTNAME" ]] && $PUPPET config set certname "$PUPCERTNAME"
             ;;
         *)
-            die "Unknown build_type '$build_type'"
+            die "Unknown build_type '$BUILD_TYPE'"
     esac
 }
 
 
 agent_run() {
     log "enter..."
-    case $build_type in
+    case $BUILD_TYPE in
         master)
-            log "nothing to do for build_type: '$build_type'"
+            log "nothing to do for build_type: '$BUILD_TYPE'"
             ;;
         agent)
             $PUPPET agent --test
             ;;
         *)
-            die "Unknown build_type '$build_type'"
+            die "Unknown build_type '$BUILD_TYPE'"
     esac
 }
 
