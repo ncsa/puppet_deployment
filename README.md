@@ -8,22 +8,13 @@ For both master and agent nodes
 1. (optional) \
    `< /root/puppet_deployment/scripts/helper_pkgs.txt xargs yum -y install`
 ### MASTER
-#### Restore of *R10K* Deployment
+#### Restore *R10K* Deployment
 1. `mkdir /backups`
 1. Copy backup tar.gz file into `/backups/.`
 1. `export PUPBKUPDIR=/backups`
 1. `export PUPBUILDTYPE=master`
 1. `export PUPCONFIGTYPE=r10k`
 1. `/root/puppet_deployment/puppet_install`
-1. _One Time Only_ - migrate legacy deployment to r10k deployment
-   1. Extract puppet backup somewhere
-   1. `/root/puppet_deployment/r10k/populate_from_legacy.sh
-      -M MODULES_PATH
-      -D HIERA_DATA_PATH
-      -O OUTPUT_PATH
-      -C CONTROL_REPO_NAME
-      -H HIERA_REPO_NAME
-      `
 1. Edit `/root/puppet_deployment/r10k/r10k_init.pp`
 1. `/root/puppet_deployment/r10k/r10k_init.sh`
 1. TODO
@@ -32,7 +23,7 @@ For both master and agent nodes
       1. run `puppet generate types` for each environment
    1. Can this be included in `r10k_init.pp`?
 1. `hostname -I` #Use this ip for agent setup
-#### Full Restore of Legacy Master
+#### Restore Legacy Deployment
 1. `mkdir /backups`
 1. Copy backup tar.gz file into `/backups/.`
 1. `export PUPBKUPDIR=/backups`
@@ -58,12 +49,25 @@ Relevant for testing in VM infrastructure
 1. puppet agent -t
 
 ## Docker
-(Warning: needs more work, suffers from "Failed to get D-Bus connection:
-operation not permitted." errors).
+(Warning: needs more work, suffers from `Failed to get D-Bus connection:
+operation not permitted.`).
 1. MASTER
    1. `doit.docker master`
 1. AGENT (relevant for testing in VM infrastructure)
    1. `doit.docker agent [hostname.fqdn]`
+
+# Migrate legacy deployment to r10k deployment
+1. Do _Restore Legacy Master_ (above) or run the following on production master \
+   Note that the output will be written to `OUTPUT_PATH`. \
+   Source files remain untouched.
+1. Extract puppet backup somewhere (not needed if running on the production master)
+1. `/root/puppet_deployment/r10k/populate_from_legacy.sh
+   -M MODULES_PATH
+   -D HIERA_DATA_PATH
+   -O OUTPUT_PATH
+   -C CONTROL_REPO_NAME
+   -H HIERA_REPO_NAME
+   `
 
 # Sample Scenario
 Enable and test environment isolation
