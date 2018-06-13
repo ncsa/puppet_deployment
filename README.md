@@ -22,6 +22,7 @@ For both master and agent nodes
       1. create symlink for each hiera data dir
       1. run `puppet generate types` for each environment
    1. Can this be included in `r10k_init.pp`?
+      1. See: https://github.com/voxpupuli/puppet-r10k/blob/master/manifests/config.pp
 1. `hostname -I` #Use this ip for agent setup
 #### Restore Legacy Deployment
 1. `mkdir /backups`
