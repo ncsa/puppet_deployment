@@ -42,6 +42,35 @@ ask_yes_no() {
 }
 
 
+continue_or_exit() {
+    [[ -n "$1" ]] && echo "$1"
+    shift
+    local pause=60
+    [[ -n "${1//[^0-9]/}" ]] && pause="${1//[^0-9]/}"
+    echo "Continue?"
+    local yn
+    select yn in "Yes" "No"; do
+        case $yn in
+            Yes) return 0;;
+            No ) exit 1;;
+        esac
+    done
+}
+
+
+assert_root() {
+    log "enter..."
+    [[ $EUID -eq 0 ]] || die 'Must be root'
+}
+
+
+install_pkgs() {
+    log "enter..."
+    [[ $# -gt 0 ]] || die "empty pkg list"
+    yum install -y "$@" || die "yum install returned non-zero"
+}
+
+
 ip_increment() {
     [[ $DEBUG -eq 1 ]] && set -x
     ipstart="$1"

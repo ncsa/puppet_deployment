@@ -11,7 +11,7 @@ for f in "${INCLUDES[@]}"; do
     source  "$f"
 done
 
-# Global variables (in all caps) are set once here and never changed
+# Global settings
 PUPPET=/opt/puppetlabs/bin/puppet
 PUPPETSRVR=/opt/puppetlabs/bin/puppetserver
 HOSTNAME=$(hostname)
@@ -20,17 +20,20 @@ REQUIRED_PKGS_COMMON=( bind-utils lsof )
 REQUIRED_PKGS_MASTER=( PyYAML )
 REQUIRED_PKGS_AGENT=()
 
-# Command line options (defaults)
+# Command line option defaults
 VERBOSE=0
 DEBUG=0
 REPO_URL=https://yum.puppetlabs.com/puppetlabs-release-pc1-el-7.noarch.rpm
-BKUP_DIR=/backups
+BKUP_DIR="${PUPBKUPDIR:-/backups}"
 BUILD_TYPE="$PUPBUILDTYPE"           #master | agent (allow to be set by env var)
 CONFIG_TYPE="$PUPCONFIGTYPE"         #new | restore | r10k (allow env var)
 AGENT_CERT_NAME="$PUPCERTNAME"       #allow override hostname
+AGENT_PUPMASTER="$PUPMASTER"         #ip or valid DNS hostname of pupmaster
 
 
-process_cmdline() {
+###
+# Process Command Line
+###
 while :; do
     case "$1" in
         -h|-\?|--help)
@@ -38,42 +41,42 @@ while :; do
             echo "Options:"
             echo "    -a                    (build an agent)"
             echo "    -A <AgentCertname>    (override certname, defaults to hostname)"
+            echo "    -b <backup_dir>       (path to backup directory, containing .tgz files)"
             echo "    -d                    (enable debug mode)"
             echo "    -m                    (build a master)"
             echo "    -M <new|restore|r10k> (how to configure puppet master)"
+            echo "    -P <Puppet Master IP> (IP or hostname of puppet master, used only for agent build type)"
             echo "    -v                    (enable verbose mode)"
             exit
             ;;
-        -a)
-            BUILD_TYPE=agent
+        -a) BUILD_TYPE=agent
             ;;
-        -A)
-            AGENT_CERT_NAME="$2"
+        -A) AGENT_CERT_NAME="$2"
             shift
             ;;
-        -d)
-            VERBOSE=1
+        -b) BKUP_DIR="$2"
+            shift
+            ;;
+        -d) VERBOSE=1
             DEBUG=1
             ;;
-        -m)
-            BUILD_TYPE=master
+        -m) BUILD_TYPE=master
             ;;
-        -M)
-            CONFIG_TYPE="$2"
+        -M) CONFIG_TYPE="$2"
             shift
             ;;
-        -v)
-            VERBOSE=1
-            ;;
-        --)
+        -P) AGENT_PUPMASTER="$2"
             shift
+            ;;
+        -v) VERBOSE=1
+            ;;
+        --) shift
             break
             ;;
         -?*)
-            die "Invalid option: -$1"
+            die "Invalid option: $1"
             ;;
-        *)
-            break
+        *)  break
             ;;
     esac
     shift
@@ -84,20 +87,18 @@ case "$BUILD_TYPE" in
     master)
         # check config_type ... only relevant if build_type is MASTER
         if [[ " new restore r10k " =~ " $CONFIG_TYPE " ]]; then
+            : #pass
         else
             die "Missing or invalid config type: '$CONFIG_TYPE' for puppet master"
         fi
         ;;
     agent)
-        : #pass
+        [[ -n "$AGENT_PUPMASTER" ]] || die 'Missing Pup Master IP or hostname'
         ;;
     *)
         die "Invalid build type '$BUILD_TYPE'"
         ;;
 esac
-}
-
-
 
 
 ###
@@ -105,42 +106,9 @@ esac
 ###
 
 
-
-
-
-# Global variables that are set or modified by functions below
-build_type=
-
-
-
-continue_or_exit() {
-    [[ -n "$1" ]] && echo "$1"
-    shift
-    local pause=60
-    [[ -n "${1//[^0-9]/}" ]] && pause="${1//[^0-9]/}"
-    echo "Continue?"
-    local yn
-    select yn in "Yes" "No"; do
-        case $yn in
-            Yes) return 0;;
-            No ) exit 1;;
-        esac
-    done
-}
-
-
-assert_root() {
-    log "enter..."
-    [[ $EUID -eq 0 ]] || die 'Must be root'
-}
-
-
-
-
-
-
 install_required_pkgs() {
     log "enter..."
+    [[ "$DEBUG" -gt 0 ]] && set -x
     local pkg_list=( "${REQUIRED_PKGS_COMMON[@]}" )
     case "$BUILD_TYPE" in
         master)
@@ -151,12 +119,13 @@ install_required_pkgs() {
             ;;
     esac
     [[ ${#pkg_list[@]} -gt 0 ]] || die "empty pkg list"
-    yum install -y "${pkg_list[@]}" || die "yum install returned non-zero"
+    install_pkgs "${pkg_list[@]}" || die "error during pkg install"
 }
 
 
-puppet_install() {
+install_puppet() {
     log "enter..."
+    [[ "$DEBUG" -gt 0 ]] && set -x
     ls /etc/yum.repos.d/puppetlabs*.repo &>/dev/null \
     || yum -y install $REPO_URL
 
@@ -180,44 +149,32 @@ get_bkup_src() {
 
 restore_config() {
     log "enter..."
-    case "$BUILD_TYPE" in
-        master)
-            fn=$( get_bkup_src )
-            [[ -z "$fn" ]] && die "Cant find a puppet backup"
-            tar zxPf "$fn" --overwrite -T - <<ENDHERE
+    [[ "$DEBUG" -gt 0 ]] && set -x
+    local fn=$( get_bkup_src )
+    [[ -z "$fn" ]] && die "Cant find a puppet backup"
+    tar zxPf "$fn" --overwrite -T - <<ENDHERE
 /etc/puppetlabs/puppet/*.conf
 /etc/puppetlabs/puppet/*.yaml
 /etc/puppetlabs/puppetserver/
 /etc/puppetlabs/code/config/
 ENDHERE
-            ;;
-        agent)
-            log "nothing to do for build_type: '$BUILD_TYPE'"
-            ;;
-    esac
 }
 
 
 disable_puppetdb() {
     log "enter..."
-    case "$BUILD_TYPE" in
-        master)
-            $PUPPET config set storeconfigs false --section master
-            $PUPPET config set reports store --section master
-            for f in puppetdb.conf routes.yaml; do
-                rm /etc/puppetlabs/puppet/"$f"
-            done
-            ;;
-        agent)
-            log "nothing to do for build_type: '$BUILD_TYPE'"
-            ;;
-        *) die "unknown build type '$BUILD_TYPE'"
-    esac
+    [[ "$DEBUG" -gt 0 ]] && set -x
+    $PUPPET config set storeconfigs false --section master
+    $PUPPET config set reports store --section master
+    for f in puppetdb.conf routes.yaml; do
+        rm /etc/puppetlabs/puppet/"$f"
+    done
 }
 
 
 restore_environments() {
     log "enter..."
+    [[ "$DEBUG" -gt 0 ]] && set -x
     fn=$( get_bkup_src )
     [[ -z "$fn" ]] && die "Cant find a puppet backup"
     find /etc/puppetlabs/code/environments -delete
@@ -229,7 +186,8 @@ ENDHERE
 
 restore_ca() {
     log "enter..."
-    fn=$( get_bkup_src )
+    [[ "$DEBUG" -gt 0 ]] && set -x
+    local fn=$( get_bkup_src )
     [[ -z "$fn" ]] && die "Cant find a puppet backup"
     tar zxPf "$fn" --overwrite -T - <<ENDHERE
 /etc/puppetlabs/puppet/ssl
@@ -239,32 +197,26 @@ ENDHERE
 
 configure_ca() {
     log "enter..."
-    case "$BUILD_TYPE" in
-        master)
-            [[ -d /etc/puppetlabs/puppet/ssl/ca ]] && {
-                log 'CA already configured, skipping.'
-                return 0
-            }
-            $PUPPET cert list -a
-            $PUPPET config set certname $HOSTNAME --section master
-            $PUPPET certificate generate \
-                ${DNS_ALT_NAMES:+--dns-alt-names $DNS_ALT_NAMES} \
-                --ca-location local \
-                $HOSTNAME
-            $PUPPET cert sign $HOSTNAME --allow-dns-alt-names
-            # don't know what this does, but puppetserver won't start otherwise
-            $PUPPET certificate find $HOSTNAME --ca-location local &>/dev/null
-            ;;
-        agent)
-            log "nothing to do for build_type: '$BUILD_TYPE'"
-            ;;
-        *) die "unknown build type '$BUILD_TYPE'"
-    esac
+    [[ "$DEBUG" -gt 0 ]] && set -x
+    [[ -d /etc/puppetlabs/puppet/ssl/ca ]] && {
+        log 'CA already configured, skipping.'
+        return 0
+    }
+    $PUPPET cert list -a
+    $PUPPET config set certname $HOSTNAME --section master
+    $PUPPET certificate generate \
+        ${DNS_ALT_NAMES:+--dns-alt-names $DNS_ALT_NAMES} \
+        --ca-location local \
+        $HOSTNAME
+    $PUPPET cert sign $HOSTNAME --allow-dns-alt-names
+    # don't know what this does, but puppetserver won't start otherwise
+    $PUPPET certificate find $HOSTNAME --ca-location local &>/dev/null
 }
 
 
 puppetserver() {
     log "enter..."
+    [[ "$DEBUG" -gt 0 ]] && set -x
     [[ "$BUILD_TYPE" != 'master' ]] && {
         log "nothing to do for build_type: '$BUILD_TYPE'"
         return 0
@@ -289,6 +241,7 @@ puppetserver() {
 
 
 is_puppetserver_running() {
+    [[ "$DEBUG" -gt 0 ]] && set -x
     log "enter..."
     lsof -i :8140 &>/dev/null
 }
@@ -296,7 +249,8 @@ is_puppetserver_running() {
 
 create_autosign() {
     log "enter..."
-    fn=$( $PUPPET config print autosign )
+    [[ "$DEBUG" -gt 0 ]] && set -x
+    local fn=$( $PUPPET config print autosign )
     [[ -f $fn ]] && return 0
     cat > $fn <<ENDHERE
 *.ncsa.illinois.edu
@@ -307,49 +261,54 @@ ENDHERE
 
 agent_config() {
     log "enter..."
-    case $BUILD_TYPE in
-        master)
-            log "nothing to do for build_type: '$BUILD_TYPE'"
-            ;;
-        agent)
-            #set custom puppet server (if environment variable PUPMASTER exists)
-            [[ -n "$PUPMASTER" ]] && $PUPPET config set server "$PUPMASTER"
-            [[ -n "$PUPCERTNAME" ]] && $PUPPET config set certname "$PUPCERTNAME"
-            ;;
-        *)
-            die "Unknown build_type '$BUILD_TYPE'"
-    esac
+    [[ "$DEBUG" -gt 0 ]] && set -x
+    $PUPPET config set server "$AGENT_PUPMASTER"
+    [[ -n "$AGENT_CERTNAME" ]] && $PUPPET config set certname "$AGENT_CERTNAME"
 }
 
 
 agent_run() {
     log "enter..."
-    case $BUILD_TYPE in
-        master)
-            log "nothing to do for build_type: '$BUILD_TYPE'"
-            ;;
-        agent)
-            $PUPPET agent --test
-            ;;
-        *)
-            die "Unknown build_type '$BUILD_TYPE'"
-    esac
+    [[ "$DEBUG" -gt 0 ]] && set -x
+    $PUPPET agent --test
 }
 
 
 ####################################################
 
 
+# Always perform these steps
 assert_root
-process_cmdline $*
 install_required_pkgs
-puppet_install
+install_puppet
 
-#restore_config
-#disable_puppetdb
-#restore_ca
+# Next steps depend on install type
+case "$BUILD_TYPE" in
+    master)
+        case "$CONFIG_TYPE" in
+            restore)
+                restore_config
+                disable_puppetdb
+                restore_environments
+                restore_ca
+                ;;
+            new)
+                configure_ca
+                create_autosign
+                ;;
+            r10k)
+                restore_config
+                disable_puppetdb
+                #restore_ca
+                configure_ca
+                ;;
+        esac
+        puppetserver start
+        is_puppetserver_running
+        ;;
+    agent)
+        agent_config
+        #agent_run
+        ;;
+esac
 
-#configure_ca
-#puppetserver start
-#agent_config
-#agent_run
