@@ -1,18 +1,26 @@
 ---
+defaults:
+    box: centos/7
+    memory: 512
 guests:
     master:
-        box: centos/7
         hostname: puppet
         ip: 192.168.2.2
         memory: 2048
         env:
             PUPBUILDTYPE: master
-            PUPCONFIGTYPE: r10k
-    agent:
-        box: centos/7
-        hostname: agent01
+            PUPCONFIGTYPE: new
+            PUPBKUPDIR: /vagrant/backups
+        synced_folders:
+          - src: .
+            dest: /root/puppet_deployment
+            options:
+                :create: true
+                :owner: root
+                :group: root
+            
+    agent01:
         ip: 192.168.2.3
-        memory: 512
         env:
             PUPBUILDTYPE: agent
             PUPCERTNAME: lsst-test09.ncsa.illinois.edu
