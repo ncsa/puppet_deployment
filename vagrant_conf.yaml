@@ -1,0 +1,19 @@
+---
+guests:
+    master:
+        box: centos/7
+        hostname: puppet
+        ip: 192.168.2.2
+        memory: 2048
+        env:
+            PUPBUILDTYPE: master
+            PUPCONFIGTYPE: r10k
+    agent:
+        box: centos/7
+        hostname: agent01
+        ip: 192.168.2.3
+        memory: 512
+        env:
+            PUPBUILDTYPE: agent
+            PUPCERTNAME: lsst-test09.ncsa.illinois.edu
+            PUPMASTER: 192.168.2.2
