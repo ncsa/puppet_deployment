@@ -1,6 +1,27 @@
-# Usage
+# Quickstart
 
-## VM (or live host) quickstart
+## Vagrant
+1. `git clone https://github.com/ncsa/puppet_deployment.git`
+1. `cd puppet_deployment`
+1. `vagrant up`
+1. `vagrant ssh master`
+   1. `/root/puppet_deployment/puppet_install`
+   1. `servicectl start puppetserver`
+1. `vagrant ssh agent`
+   1. `/root/puppet_deployment/puppet_install`
+   1. `puppet agent -t`
+
+_(optional)_ Edit _vagrant_conf.yaml_ before starting VM's
+* For master node, set environment variables:
+  * PUPBUILDTYPE=master
+  * PUPCONFIGTYPE (valid values: _new_, _restore_, _r10k_)
+  * PUPBKUPDIR=_\<path to directory where puppet_backup.tgz exists\>_
+* For agent node(s), set environment variables:
+  * PUPBUILDTYPE=agent
+  * PUPMASTER=_\<ip address of master node from above\>_
+  * PUPCERTNAME=_<override hostname if desired>_ (this is optional, puppet will default to use hostname if this is unset)
+
+## Physical Host (or other VM)
 ### Common
 For both master and agent nodes
 1. `yum -y install git; yum -y upgrade && reboot`
@@ -49,16 +70,8 @@ Relevant for testing in VM infrastructure
    ```
 1. puppet agent -t
 
-## Docker
-(Warning: needs more work, suffers from `Failed to get D-Bus connection:
-operation not permitted.`).
-1. MASTER
-   1. `doit.docker master`
-1. AGENT (relevant for testing in VM infrastructure)
-   1. `doit.docker agent [hostname.fqdn]`
-
 # Migrate legacy deployment to r10k deployment
-1. Do _Restore Legacy Master_ (above) or run the following on production master \
+1. Do _Restore Legacy Deployment_ (above) or run the following on production master \
    Note that the output will be written to `OUTPUT_PATH`. \
    Source files remain untouched.
 1. Extract puppet backup somewhere (not needed if running on the production master)
