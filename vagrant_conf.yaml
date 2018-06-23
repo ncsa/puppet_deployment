@@ -1,7 +1,21 @@
 ---
+# Defaults will be over-written by per-guest values
 defaults:
     box: centos/7
     memory: 512
+    env:
+        PUPFROMDEFAULT: fromdefault
+
+# Common data will be merged together with per-guest settings
+common:
+    env:
+        PUPFROMCOMMON: fromcommon
+    shell_always:
+      - cmd: sudo ln -s /vagrant /root/puppet_deployment
+
+# Define each VM
+# Hash key is the VM name (use that argument to vagrant ssh)
+# Use 'hostname' to set the hostname, or omit for vagrant to use the hash key
 guests:
     master:
         hostname: puppet
@@ -11,13 +25,6 @@ guests:
             PUPBUILDTYPE: master
             PUPCONFIGTYPE: new
             PUPBKUPDIR: /vagrant/backups
-        synced_folders:
-          - src: .
-            dest: /root/puppet_deployment
-            options:
-                :create: true
-                :owner: root
-                :group: root
             
     agent01:
         ip: 192.168.2.3

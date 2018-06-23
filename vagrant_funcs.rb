@@ -25,10 +25,8 @@ def network_options(host)
 end
 
 def custom_synced_folders(vm, host)
-  return unless host.key?('synced_folders')
-  folders = host['synced_folders']
-
-  folders.each do |folder|
+  return unless host.key? 'synced_folders'
+  host['synced_folders'].each do |folder|
     vm.synced_folder folder['src'], folder['dest'], folder['options']
   end
 end
@@ -44,12 +42,25 @@ end
 #   - cmd: php /srv/google-dev/bin/console server:start 192.168.52.25:8080 --force
 def shell_provisioners_always(vm, host)
   if host.has_key?('shell_always')
-    scripts = host['shell_always']
-
-    scripts.each do |script|
+    host['shell_always'].each do |script|
       vm.provision "shell", inline: script['cmd'], run: "always"
     end
   end
+end
+
+
+# Normal shell provisioning (ie: run once)
+# example: 
+# shell_once:
+#   - cmd: ln -s /vagrant /root/puppet_deployment
+def shell_provisioners_once(vm, host)
+    if host.has_key?('shell_once')
+        scripts = host['shell_once']
+
+        scripts.each do |script|
+            vm.provision "shell", inline: script['cmd']
+        end
+    end
 end
 
 
@@ -70,12 +81,11 @@ def forwarded_ports(vm, host)
 end
 
 
-
 # Set environment variables inside guests
 # Based on https://github.com/hashicorp/vagrant/issues/7015
 def setenv( vm, host )
     return unless host.key?('env')
-    cmd="tee \"/etc/profile.d/setenv.sh\" > \"/dev/null\" <<ENDHERE"
+    cmd="tee -a \"/etc/profile.d/setenv.sh\" > \"/dev/null\" <<ENDHERE"
     host['env'].each do |key, val|
         cmd="#{cmd}\nexport #{key}=\"#{val}\""
     end
@@ -83,5 +93,52 @@ def setenv( vm, host )
     vm.provision "shell", inline: cmd, run: "always"
 end
 
+
+# Merge two hashes that are stored in a parent hash
+# Parameters are the parent hashes and the key for the subhash inside
+# Account for the possibility that one or both parent hashes might not have
+# a matching key
+# If duplicate keys, value from h2 wins.
+def merge_child_hashes( h1, h2, key )
+    h_out = {}
+    if h1.has_key?( key )
+        if h2.has_key?( key )
+            h_out = { key => h1[ key ].merge( h2[ key ] ) }
+        else
+            h_out = { key => h1[ key ] }
+        end
+    elsif h2.has_key?( key )
+        h_out = { key => h2[ key ] }
+    end
+    return h_out
+end
+
+
+# Merge two arrays that are stored in parent hashes
+# Parameters are the parent hashes and the key for the subhash inside
+# Account for the possibility that one or both parent hashes might not have
+# a matching key
+def concat_child_arrays( h1, h2, key )
+    h_out = {}
+#    puts "key: #{key}"
+#    puts "h1: #{h1}"
+#    puts "h2: #{h2}"
+    if h1.has_key?( key )
+#        puts "h1 has key"
+        if h2.has_key?( key )
+#            puts "h2 has key"
+            h_out = { key => h1[ key ].concat( h2[ key ] ) }
+        else
+#            puts "h2 NO key"
+            h_out = { key => h1[ key ] }
+        end
+    elsif h2.has_key?( key )
+#        puts "h2 has key"
+        h_out = { key => h2[ key ] }
+    end
+    return h_out
+end
+
+    
 # -*- mode: ruby -*-
 # vi: ft=ruby :

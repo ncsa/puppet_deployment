@@ -5,9 +5,11 @@
 1. `cd puppet_deployment`
 1. `vagrant up`
 1. `vagrant ssh master`
+   1. `sudo su -`
    1. `/root/puppet_deployment/puppet_install`
    1. `servicectl start puppetserver`
 1. `vagrant ssh agent`
+   1. `sudo su -`
    1. `/root/puppet_deployment/puppet_install`
    1. `puppet agent -t`
 
