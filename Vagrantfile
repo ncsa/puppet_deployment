@@ -47,7 +47,7 @@ Vagrant.configure("2") do |config|
             onceData = concat_child_arrays( data, common, 'shell_once' )
 #            puts "onceData for node '#{nodeName}'"
 #            pp onceData
-            shell_provisioners_always( node.vm, onceData )
+            shell_provisioners_once( node.vm, onceData )
 
         end
     end
