@@ -55,9 +55,7 @@ end
 #   - cmd: ln -s /vagrant /root/puppet_deployment
 def shell_provisioners_once(vm, host)
     if host.has_key?('shell_once')
-        scripts = host['shell_once']
-
-        scripts.each do |script|
+        host['shell_once'].each do |script|
             vm.provision "shell", inline: script['cmd']
         end
     end
@@ -72,9 +70,7 @@ end
 #      host: 8080
 def forwarded_ports(vm, host)
   if host.has_key?('forwarded_ports')
-    ports = host['forwarded_ports']
-
-    ports.each do |port|
+    host['forwarded_ports'].each do |port|
       vm.network "forwarded_port", guest: port['guest'], host: port['host']
     end
   end
@@ -120,20 +116,13 @@ end
 # a matching key
 def concat_child_arrays( h1, h2, key )
     h_out = {}
-#    puts "key: #{key}"
-#    puts "h1: #{h1}"
-#    puts "h2: #{h2}"
     if h1.has_key?( key )
-#        puts "h1 has key"
         if h2.has_key?( key )
-#            puts "h2 has key"
             h_out = { key => h1[ key ].concat( h2[ key ] ) }
         else
-#            puts "h2 NO key"
             h_out = { key => h1[ key ] }
         end
     elsif h2.has_key?( key )
-#        puts "h2 has key"
         h_out = { key => h2[ key ] }
     end
     return h_out
