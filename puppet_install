@@ -14,6 +14,7 @@ done
 # Global settings
 PUPPET=/opt/puppetlabs/bin/puppet
 PUPPETSRVR=/opt/puppetlabs/bin/puppetserver
+PUPPET_REPO_URL=https://yum.puppetlabs.com/puppetlabs-release-pc1-el-7.noarch.rpm
 HOSTNAME=$(hostname)
 DNS_ALT_NAMES=$( hostname -I | awk '{print $1}' )
 REQUIRED_PKGS_COMMON=( bind-utils lsof )
@@ -23,7 +24,6 @@ REQUIRED_PKGS_AGENT=()
 # Command line option defaults
 VERBOSE=0
 DEBUG=0
-REPO_URL=https://yum.puppetlabs.com/puppetlabs-release-pc1-el-7.noarch.rpm
 BKUP_DIR="${PUPBKUPDIR:-/backups}"
 BUILD_TYPE="$PUPBUILDTYPE"           #master | agent (allow to be set by env var)
 CONFIG_TYPE="$PUPCONFIGTYPE"         #new | restore | r10k (allow env var)
@@ -41,7 +41,7 @@ while :; do
             echo "Options:"
             echo "    -a                    (build an agent)"
             echo "    -A <AgentCertname>    (override certname, defaults to hostname)"
-            echo "    -b <backup_dir>       (path to backup directory, containing .tgz files)"
+            echo "    -b <backup_dir>       (path to backup directory, containing *_puppet_config.tar.gz files)"
             echo "    -d                    (enable debug mode)"
             echo "    -m                    (build a master)"
             echo "    -M <new|restore|r10k> (how to configure puppet master)"
@@ -127,7 +127,7 @@ install_puppet() {
     log "enter..."
     [[ "$DEBUG" -gt 0 ]] && set -x
     ls /etc/yum.repos.d/puppetlabs*.repo &>/dev/null \
-    || yum -y install $REPO_URL
+    || yum -y install $PUPPET_REPO_URL
 
     local pkglist
     case "$BUILD_TYPE" in
@@ -299,8 +299,8 @@ case "$BUILD_TYPE" in
             r10k)
                 restore_config
                 disable_puppetdb
-                #restore_ca
-                configure_ca
+                restore_ca
+                #configure_ca
                 ;;
         esac
         puppetserver start

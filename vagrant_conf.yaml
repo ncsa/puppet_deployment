@@ -4,14 +4,24 @@ defaults:
     box: centos/7
     memory: 512
     env:
-        PUPFROMDEFAULT: fromdefault
+        PUPFROMDEFAULT: test_override
 
 # Common data will be merged together with per-guest settings
 common:
     env:
-        PUPFROMCOMMON: fromcommon
+        PUPFROMCOMMON: test_merge
     shell_always:
-      - cmd: sudo ln -s /vagrant /root/puppet_deployment
+      - cmd: ln -s /vagrant /root/puppet_deployment
+      - cmd: |
+             chown -R root:root /vagrant/.ssh
+             chmod -R 400 /vagrant/.ssh
+             chmod 500 /vagrant/.ssh
+             ln -s /vagrant/.ssh /root/.ssh
+    shell_once:
+      - cmd: xargs -r -a /vagrant/yum_pkg_list.txt yum -y install
+      - cmd: |
+              git config --global user.email "vagrant"
+              git config --global user.name "vagrant"
 
 # Define each VM
 # Hash key is the VM name (use that argument to vagrant ssh)
@@ -20,10 +30,10 @@ guests:
     master:
         hostname: puppet
         ip: 192.168.2.2
-        memory: 2048
+        memory: 3072
         env:
             PUPBUILDTYPE: master
-            PUPCONFIGTYPE: new
+            PUPCONFIGTYPE: r10k
             PUPBKUPDIR: /vagrant/backups
             
     agent01:

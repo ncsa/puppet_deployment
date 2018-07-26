@@ -25,6 +25,7 @@ CONFIG_VERSION_URL=https://raw.githubusercontent.com/voxpupuli/puppet-r10k/maste
 OUTPUT_PATH=/root
 CONTROL_REPO_NAME=control
 HIERA_REPO_NAME=hiera
+LEGACY_REPO_NAME=legacy
 while :; do
     case "$1" in
         -h|-\?|--help)
@@ -34,6 +35,7 @@ while :; do
             echo "    -d                   (enable debug mode)"
             echo "    -D HIERA_DATA_PATH   (default: '$HIERA_DATA_PATH')"
             echo "    -H HIERA_REPO_NAME   (default: '$HIERA_REPO_NAME')"
+            echo "    -L LEGACY_REPO_NAME  (default: '$LEGACY_REPO_NAME')"
             echo "    -M MODULES_PATH      (default: '$MODULES_PATH')"
             echo "    -O OUTPUT_PATH       (default: '$OUTPUT_PATH')"
             echo "    -v                   (enable verbose mode)"
@@ -89,6 +91,18 @@ done
 # Functions
 ###
 
+
+install_jq() {
+    log "enter..."
+    which jq &>/dev/null \
+    || continue_or_exit "required program 'jq' not found; shall I install it?"
+    local url='https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64'
+    local tgt='/usr/local/bin/jq'
+    curl -sf -o "$tgt" "$url"
+    local rc=$?
+    [[ $rc -ne 0 ]] && die "curl returned non-zero '$rc'"
+    chmod +x "$tgt"
+}
 
 public_module_names_versions() {
     log "enter..."
@@ -147,7 +161,7 @@ mk_environment_conf() {
     [[ "$DEBUG" -eq 1 ]] && set -x
     local repopath="$OUTPUT_PATH/$CONTROL_REPO_NAME"
     >"$repopath"/environment.conf cat <<ENDHERE
-modulepath = site:modules
+modulepath = site:modules:legacy
 config_version = scripts/config_version.sh \$environment
 ENDHERE
 }
@@ -168,7 +182,6 @@ ENDHERE
 }
 
 
-
 mk_config_version() {
     #get puppt config_version script
     log "enter..."
@@ -176,37 +189,6 @@ mk_config_version() {
     local repopath="$OUTPUT_PATH/$CONTROL_REPO_NAME"
     curl -sSo "$repopath"/scripts/config_version.sh "$CONFIG_VERSION_URL" \
     || die "download failed for config_version.sh"
-}
-
-
-cp_local_modules() {
-    # Copy non-3rd party modules into site
-    log "enter..."
-    [[ "$DEBUG" -eq 1 ]] && set -x
-    local repopath="$OUTPUT_PATH/$CONTROL_REPO_NAME"
-    local external_name metafn pupfn rc
-    # walk through list of module dirnames
-    find "$MODULES_PATH" -maxdepth 1 -mindepth 1 -type d -print \
-    | while read dirpath; do
-        # skip gpfs, do it manually at the end
-        [[ "${dirpath##*/}" == "gpfs" ]] && continue
-        metafn="$dirpath"/metadata.json
-        # if no metadata, assume it's a local module
-        [[ -f "$metafn" ]] || {
-            cpdir "$dirpath" "$repopath"/site/
-            continue
-        }
-        # if name from metadata.json is IN Puppetfile, skip
-        external_name=$( jq -r '.name' "$metafn" )
-        pupfn="$repopath"/Puppetfile
-        grep -F "$external_name" "$pupfn" 1>/dev/null
-        rc=$?
-        case $rc in
-            0) continue;; #grep found a positive match, skip this module
-            1) cpdir "$dirpath" "$repopath"/site/ ;;
-            2) die "during grep for '$external_name' in Puppetfile '$pupfn'"
-        esac
-    done
 }
 
 
@@ -225,17 +207,19 @@ cpdir() {
 }
 
 
-_commit_repo() {
+commit_repo() {
     log "enter..."
     [[ "$DEBUG" -eq 1 ]] && set -x
-    local repopath="$1"
-    local remote_url="$2"
+    local reponame="$1"
+    local repopath="$OUTPUT_PATH/$reponame"
+    local remote_url="$GIT_URL_BASE/$reponame".git
     [[ -d "$repopath" ]] || die "Repopath '$repopath' directory not found"
-    local rc
-    # fail if remote repo doesn't exist
+    # fail if remote repo already exists
     git ls-remote -h "$remote_url" &>/dev/null
-    rc=$?
-    [[ "$rc" -ne 0 ]] && die "Remote git repo doesnt exist: '$remote_url'"
+    local rc=$?
+    [[ "$rc" -eq 0 ]] && die "Remote git repo already exists: '$remote_url'"
+    # git returns something less than 128 if there is a different error (ie: access denied, etc.)
+    [[ "$rc" -ne 128 ]] && die "Unknown error checking for existence or remote repo: '$remote_url'"
     (
         cd "$repopath"
         git init
@@ -244,17 +228,56 @@ _commit_repo() {
         git add .
         git commit -m 'Initial commit'
         git push -u origin production
-    )
+    ) || die "Failed to commit repo: '$reponame'"
 }
 
 
-commit_control_repo() {
+mk_legacy_repo_skeleton() {
+    log "enter..."
+    [[ $DEBUG -gt 0 ]] && set -x
+    local repopath="$OUTPUT_PATH/$LEGACY_REPO_NAME"
+    if [[ -d "$repopath" ]] ; then
+        if [[ "$ALWAYSYES" -eq 1 ]] ; then
+            : #pass
+        elif ask_yes_no "Directory exists, ok to delete: ['$repopath'] ?" ; then
+            : #pass
+        else
+            die "Directory exists: ['$repopath']"
+        fi
+        find "$repopath" -delete
+    fi
+    mkdir -p "$repopath"/modules
+}
+
+
+cp_legacy_modules() {
+    # Copy non-3rd party modules into separate repo
     log "enter..."
     [[ "$DEBUG" -eq 1 ]] && set -x
-    local repopath="$OUTPUT_PATH/$CONTROL_REPO_NAME"
-    local remote_url="$GIT_URL_BASE/$CONTROL_REPO_NAME".git
-    _commit_repo "$repopath" "$remote_url" \
-    || die "Failed to commit control repo"
+    local repopath="$OUTPUT_PATH/$LEGACY_REPO_NAME"
+    local external_name metafn pupfn rc
+    # walk through list of module dirnames
+    find "$MODULES_PATH" -maxdepth 1 -mindepth 1 -type d -print \
+    | while read dirpath; do
+        # skip gpfs, add it to Puppetfile manually
+        [[ "${dirpath##*/}" == "gpfs" ]] && continue
+        metafn="$dirpath"/metadata.json
+        # if no metadata, assume it's a local module
+        [[ -f "$metafn" ]] || {
+            cpdir "$dirpath" "$repopath"
+            continue
+        }
+        # if name from metadata.json is IN Puppetfile, skip
+        external_name=$( jq -r '.name' "$metafn" )
+        pupfn="$repopath"/Puppetfile
+        grep -F "$external_name" "$pupfn" 1>/dev/null
+        rc=$?
+        case $rc in
+            0) continue;; #grep found a positive match, skip this module
+            1) cpdir "$dirpath" "$repopath" ;;
+            2) die "during grep for '$external_name' in Puppetfile '$pupfn'"
+        esac
+    done
 }
 
 
@@ -288,38 +311,35 @@ cp_hieradata() {
 }
 
 
-commit_hiera_repo() {
-    log "enter..."
-    [[ "$DEBUG" -eq 1 ]] && set -x
-    local repopath="$OUTPUT_PATH/$HIERA_REPO_NAME"
-    local remote_url="$GIT_URL_BASE/$HIERA_REPO_NAME".git
-    _commit_repo "$repopath" "$remote_url" \
-    || die "Failed to commit hiera repo"
-}
-
 [[ "$DEBUG" -eq 1 ]] && set -x
 
 
 ###
 # Check dependencies
 ###
-which jq &>/dev/null || die "required program 'jq' not found"
+install_jq
 
 
 ###
-# Populate control_repo
+# Populate control repo
 ###
 mk_control_repo_skeleton
 mk_puppetfile
 mk_environment_conf
 mk_hiera_conf
 mk_config_version
-cp_local_modules
-commit_control_repo
+commit_repo "$CONTROL_REPO_NAME"
+
+###
+#  Populate legacy repo
+###
+mk_legacy_repo_skeleton
+cp_legacy_modules
+commit_repo "$LEGACY_REPO_NAME"
 
 ###
 # Populate hiera repo
 ###
 mk_hiera_repo_skeleton
 cp_hieradata
-commit_hiera_repo
+commit_repo "$HIERA_REPO_NAME"
