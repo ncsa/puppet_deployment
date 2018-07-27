@@ -92,7 +92,7 @@ done
 ###
 
 
-install_jq() {
+check_or_install_jq() {
     log "enter..."
     which jq &>/dev/null \
     || continue_or_exit "required program 'jq' not found; shall I install it?"
@@ -317,7 +317,7 @@ cp_hieradata() {
 ###
 # Check dependencies
 ###
-install_jq
+check_or_install_jq
 
 
 ###

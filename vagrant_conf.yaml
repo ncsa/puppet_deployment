@@ -33,7 +33,7 @@ guests:
         memory: 3072
         env:
             PUPBUILDTYPE: master
-            PUPCONFIGTYPE: r10k
+            PUPCONFIGTYPE: restore
             PUPBKUPDIR: /vagrant/backups
             
     agent01:
