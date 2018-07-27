@@ -24,6 +24,7 @@ def network_options(host)
   options
 end
 
+
 def custom_synced_folders(vm, host)
   return unless host.key? 'synced_folders'
   host['synced_folders'].each do |folder|

@@ -98,7 +98,7 @@ check_or_install_jq() {
     || continue_or_exit "required program 'jq' not found; shall I install it?"
     local url='https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64'
     local tgt='/usr/local/bin/jq'
-    curl -sf -o "$tgt" "$url"
+    curl -sfL -o "$tgt" "$url"
     local rc=$?
     [[ $rc -ne 0 ]] && die "curl returned non-zero '$rc'"
     chmod +x "$tgt"
@@ -146,12 +146,33 @@ mk_control_repo_skeleton() {
 mk_puppetfile() {
     log "enter..."
     [[ "$DEBUG" -eq 1 ]] && set -x
-    local repopath="$OUTPUT_PATH/$CONTROL_REPO_NAME"
-    puppetfile_path="$repopath"/Puppetfile
+    local controlrepo="$OUTPUT_PATH/$CONTROL_REPO_NAME"
+    local pupfn="$controlrepo"/Puppetfile
     public_module_names_versions \
     | sort \
     | awk "{ printf(\"mod '%s', '%s'\\n\", \$1, \$2) }" \
-    >"$puppetfile_path"
+    >"$pupfn"
+}
+
+
+add_git_submodules_to_puppetfile() {
+    log "enter..."
+    [[ "$DEBUG" -eq 1 ]] && set -x
+    local controlrepo="$OUTPUT_PATH/$CONTROL_REPO_NAME"
+    local pupfn="$controlrepo"/Puppetfile
+    local prodpath="$( dirname $MODULES_PATH )"
+    local fn_gitmodules="$( readlink -e $prodpath/.gitmodules )"
+    [[ -f "$fn_gitmodules" ]] || return
+    awk "
+/path = / { n=split(\$NF, parts, /\\//)
+            name=parts[n]
+            next
+          }
+/url = / { url=\$NF
+           printf(\"mod '%s',\n    :git: '%s'\n\", name, url)
+         }
+" "$fn_gitmodules" >>"$pupfn"
+    # find /etc/puppetlabs/code/environments/production/.git/modules/ -type f -name HEAD | grep -v 'refs\|logs'
 }
 
 
@@ -187,8 +208,15 @@ mk_config_version() {
     log "enter..."
     [[ "$DEBUG" -eq 1 ]] && set -x
     local repopath="$OUTPUT_PATH/$CONTROL_REPO_NAME"
-    curl -sSo "$repopath"/scripts/config_version.sh "$CONFIG_VERSION_URL" \
+    local tgtfn="$repopath"/scripts/config_version.sh
+    curl -sSo "$tgtfn" "$CONFIG_VERSION_URL" \
     || die "download failed for config_version.sh"
+    sed -e "1 a\\
+
+# Copied from:
+# $CONFIG_VERSION_URL
+
+" "$tgtfn"
 }
 
 
@@ -246,7 +274,7 @@ mk_legacy_repo_skeleton() {
         fi
         find "$repopath" -delete
     fi
-    mkdir -p "$repopath"/modules
+    mkdir -p "$repopath"
 }
 
 
@@ -254,29 +282,36 @@ cp_legacy_modules() {
     # Copy non-3rd party modules into separate repo
     log "enter..."
     [[ "$DEBUG" -eq 1 ]] && set -x
-    local repopath="$OUTPUT_PATH/$LEGACY_REPO_NAME"
-    local external_name metafn pupfn rc
+    local site="$OUTPUT_PATH/$CONTROL_REPO_NAME/site"
+    local legacyrepo="$OUTPUT_PATH/$LEGACY_REPO_NAME"
+    local pupfn="$OUTPUT_PATH/$CONTROL_REPO_NAME/Puppetfile"
+    local external_name metafn rc
     # walk through list of module dirnames
     find "$MODULES_PATH" -maxdepth 1 -mindepth 1 -type d -print \
     | while read dirpath; do
-        # skip gpfs, add it to Puppetfile manually
-        [[ "${dirpath##*/}" == "gpfs" ]] && continue
         metafn="$dirpath"/metadata.json
-        # if no metadata, assume it's a local module
-        [[ -f "$metafn" ]] || {
-            cpdir "$dirpath" "$repopath"
-            continue
-        }
-        # if name from metadata.json is IN Puppetfile, skip
-        external_name=$( jq -r '.name' "$metafn" )
-        pupfn="$repopath"/Puppetfile
-        grep -F "$external_name" "$pupfn" 1>/dev/null
-        rc=$?
-        case $rc in
-            0) continue;; #grep found a positive match, skip this module
-            1) cpdir "$dirpath" "$repopath" ;;
-            2) die "during grep for '$external_name' in Puppetfile '$pupfn'"
-        esac
+        if [[ "${dirpath##*/}" == "gpfs" ]] ; then
+            # skip gpfs
+            :
+        elif [[ "${dirpath##*/}" == "role" ]] ; then
+            # role goes into site
+            cpdir "$dirpath" "$site"
+        elif [[ "${dirpath##*/}" == "profile" ]] ; then
+            # profile goes into site
+        elif [[ ! -f "$metafn" ]] ; then
+            # if no metadata, assume it's a local module
+            cpdir "$dirpath" "$legacyrepo"
+        else
+            # if name from metadata.json is IN Puppetfile, skip
+            external_name=$( jq -r '.name' "$metafn" )
+            grep -F "$external_name" "$pupfn" 1>/dev/null
+            rc=$?
+            case $rc in
+                #0) continue;; #grep found a positive match, skip this module
+                1) cpdir "$dirpath" "$legacyrepo" ;;
+                2) die "during grep for '$external_name' in Puppetfile '$pupfn'"
+            esac
+        fi
     done
 }
 
@@ -325,21 +360,27 @@ check_or_install_jq
 ###
 mk_control_repo_skeleton
 mk_puppetfile
+add_git_submodules_to_puppetfile
+exit
 mk_environment_conf
 mk_hiera_conf
 mk_config_version
-commit_repo "$CONTROL_REPO_NAME"
 
 ###
 #  Populate legacy repo
 ###
 mk_legacy_repo_skeleton
 cp_legacy_modules
-commit_repo "$LEGACY_REPO_NAME"
 
 ###
 # Populate hiera repo
 ###
 mk_hiera_repo_skeleton
 cp_hieradata
-commit_repo "$HIERA_REPO_NAME"
+
+###
+#  Commit the new repos
+###
+#commit_repo "$CONTROL_REPO_NAME"
+#commit_repo "$LEGACY_REPO_NAME"
+#commit_repo "$HIERA_REPO_NAME"

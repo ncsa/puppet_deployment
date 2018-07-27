@@ -5,6 +5,10 @@ function vd { vagrant destroy --force --parallel @Args }
 function vssh { vagrant ssh @Args }
 function vstat { vagrant status @Args }
 function vhalt { vagrant halt @Args }
+function vspend { vagrant suspend @Args }
+function vsume { vagrant resume @Args }
+function vr { vagrant reload @Args }
+function vrp { vagrant reload --provision @Args }
 function vreset {
     vagrant destroy --force --parallel
     vagrant up

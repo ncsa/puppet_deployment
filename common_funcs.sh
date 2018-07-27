@@ -14,14 +14,14 @@ warn() {
 
 log() {
     [[ $VERBOSE -ne 1 ]] && return
-    echo "INFO (${BASH_SOURCE[1]} [${BASH_LINENO[0]}] ${FUNCNAME[1]}) $*"
+    echo "INFO (${BASH_SOURCE[1]} [${BASH_LINENO[0]}] ${FUNCNAME[1]}) $*" 1>&2
 }
 
 
 dumpvars() {
     [[ $VERBOSE -eq 1 ]] || return 0
     for a in $*; do
-        printf "%s=%s\n" $a ${!a}
+        printf "%s=%s\n" $a ${!a} 1>&2
     done
 }
 

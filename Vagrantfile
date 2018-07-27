@@ -2,7 +2,7 @@
 # vi: set ft=ruby :
 
 require 'yaml'
-require 'pp'
+#require 'pp'
 load 'vagrant_funcs.rb'
 
 # Get values from yaml config file

@@ -10,13 +10,15 @@ defaults:
 common:
     env:
         PUPFROMCOMMON: test_merge
+    # commands are run in order specified here (top to bottom)
     shell_always:
-      - cmd: ln -s /vagrant /root/puppet_deployment
       - cmd: |
              chown -R root:root /vagrant/.ssh
              chmod -R 400 /vagrant/.ssh
              chmod 500 /vagrant/.ssh
              ln -s /vagrant/.ssh /root/.ssh
+      - cmd: ln -s /vagrant /root/puppet_deployment
+    # commands are run in order specified here (top to bottom)
     shell_once:
       - cmd: xargs -r -a /vagrant/yum_pkg_list.txt yum -y install
       - cmd: |
@@ -35,6 +37,12 @@ guests:
             PUPBUILDTYPE: master
             PUPCONFIGTYPE: restore
             PUPBKUPDIR: /vagrant/backups
+#        synced_folders:
+#          - puppetdeploy:
+#                src: '.'
+#                dest: '/root/puppet_deployment'
+#                options:
+#                    type: smb
             
     agent01:
         ip: 192.168.2.3
