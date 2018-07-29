@@ -162,17 +162,29 @@ add_git_submodules_to_puppetfile() {
     local pupfn="$controlrepo"/Puppetfile
     local prodpath="$( dirname $MODULES_PATH )"
     local fn_gitmodules="$( readlink -e $prodpath/.gitmodules )"
+    local dn_git_submodules="$( readlink -e $prodpath/.git/modules )"
     [[ -f "$fn_gitmodules" ]] || return
-    awk "
-/path = / { n=split(\$NF, parts, /\\//)
-            name=parts[n]
-            next
-          }
-/url = / { url=\$NF
-           printf(\"mod '%s',\n    :git: '%s'\n\", name, url)
-         }
-" "$fn_gitmodules" >>"$pupfn"
-    # find /etc/puppetlabs/code/environments/production/.git/modules/ -type f -name HEAD | grep -v 'refs\|logs'
+	git config -lf "$fn_gitmodules" \
+	| awk -F '.'  -v "dn_git_submodules=$dn_git_submodules" "
+	function get_commit( name ) {
+		fn_head = dn_git_submodules \"/\" name \"/HEAD\"
+		cmd = \"cat \" fn_head
+		cmd | getline commit
+		return commit
+	}
+	\$3~/path=/ { n=split(\$NF,parts,/=/)
+				  path=parts[n]
+				  n=split(path,parts,/\\//)
+				  name=parts[n]
+				  commit = get_commit( path )
+				  next
+				}
+	\$3~/url=/  { n=split(\$0,parts,/=/)
+				  url=parts[n]
+				  format = \"mod '%s',\\n    :git: '%s'\\n    :commit: '%s'\\n\"
+				  printf(format, name, url, commit)
+				}
+" >> "$pupfn"
 }
 
 
@@ -209,14 +221,11 @@ mk_config_version() {
     [[ "$DEBUG" -eq 1 ]] && set -x
     local repopath="$OUTPUT_PATH/$CONTROL_REPO_NAME"
     local tgtfn="$repopath"/scripts/config_version.sh
-    curl -sSo "$tgtfn" "$CONFIG_VERSION_URL" \
+    local tmpfn=$(mktemp)
+    curl -sSo "$tmpfn" "$CONFIG_VERSION_URL" \
     || die "download failed for config_version.sh"
-    sed -e "1 a\\
-
-# Copied from:
-# $CONFIG_VERSION_URL
-
-" "$tgtfn"
+    sed -e "1 a \#\n\#\n\# Copied from: $CONFIG_VERSION_URL\n\n" "$tmpfn" > $tgtfn
+    rm $tmpfn
 }
 
 
@@ -298,6 +307,7 @@ cp_legacy_modules() {
             cpdir "$dirpath" "$site"
         elif [[ "${dirpath##*/}" == "profile" ]] ; then
             # profile goes into site
+            cpdir "$dirpath" "$site"
         elif [[ ! -f "$metafn" ]] ; then
             # if no metadata, assume it's a local module
             cpdir "$dirpath" "$legacyrepo"
@@ -361,7 +371,6 @@ check_or_install_jq
 mk_control_repo_skeleton
 mk_puppetfile
 add_git_submodules_to_puppetfile
-exit
 mk_environment_conf
 mk_hiera_conf
 mk_config_version
@@ -381,6 +390,6 @@ cp_hieradata
 ###
 #  Commit the new repos
 ###
-#commit_repo "$CONTROL_REPO_NAME"
-#commit_repo "$LEGACY_REPO_NAME"
-#commit_repo "$HIERA_REPO_NAME"
+commit_repo "$CONTROL_REPO_NAME"
+commit_repo "$LEGACY_REPO_NAME"
+commit_repo "$HIERA_REPO_NAME"
