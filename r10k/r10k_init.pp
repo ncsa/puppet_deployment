@@ -8,5 +8,8 @@ class { 'r10k':
             'remote'  => "git@git.ncsa.illinois.edu:lsst/puppet/hiera.git",
             'basedir' => "${::settings::codedir}/data",
         }
-    }
+    },
+    postrun => [
+        '/etc/puppetlabs/code/config/scripts/r10k_postrun.sh;'
+    ]
 }
