@@ -285,7 +285,7 @@ mk_legacy_repo_skeleton() {
         fi
         find "$repopath" -delete
     fi
-    mkdir -p "$repopath"
+    mkdir -p "$repopath/modules"
 }
 
 
@@ -294,7 +294,7 @@ cp_legacy_modules() {
     log "enter..."
     [[ "$DEBUG" -eq 1 ]] && set -x
     local site="$OUTPUT_PATH/$CONTROL_REPO_NAME/site"
-    local legacyrepo="$OUTPUT_PATH/$LEGACY_REPO_NAME"
+    local legacyrepo="$OUTPUT_PATH/$LEGACY_REPO_NAME/modules"
     local pupfn="$OUTPUT_PATH/$CONTROL_REPO_NAME/Puppetfile"
     local external_name metafn rc
     # walk through list of module dirnames
