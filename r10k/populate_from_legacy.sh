@@ -248,6 +248,8 @@ commit_repo() {
     log "enter..."
     [[ "$DEBUG" -eq 1 ]] && set -x
     local reponame="$1"
+    local default_branch=production
+    [[ $# -ge 2 ]] && default_branch="$2"
     local repopath="$OUTPUT_PATH/$reponame"
     local remote_url="$GIT_URL_BASE/$reponame".git
     [[ -d "$repopath" ]] || die "Repopath '$repopath' directory not found"
@@ -260,11 +262,11 @@ commit_repo() {
     (
         cd "$repopath"
         git init
-        git checkout -b production
+        git checkout -b "$default_branch"
         git remote add origin "$remote_url"
         git add .
         git commit -m 'Initial commit'
-        git push -u origin production
+        git push -u origin "$default_branch"
     ) || die "Failed to commit repo: '$reponame'"
 }
 
