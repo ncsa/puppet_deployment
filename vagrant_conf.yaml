@@ -35,6 +35,14 @@ guests:
         memory: 3072
         env:
             PUPBUILDTYPE: master
+            PUPCONFIGTYPE: r10k
+            PUPBKUPDIR: /vagrant/backups
+    legacy:
+        hostname: puppet
+        ip: 192.168.2.3
+        memory: 3072
+        env:
+            PUPBUILDTYPE: master
             PUPCONFIGTYPE: restore
             PUPBKUPDIR: /vagrant/backups
 #        synced_folders:
@@ -44,9 +52,9 @@ guests:
 #                options:
 #                    type: smb
             
-    agent01:
-        ip: 192.168.2.3
-        env:
-            PUPBUILDTYPE: agent
-            PUPCERTNAME: lsst-test09.ncsa.illinois.edu
-            PUPMASTER: 192.168.2.2
+#    agent01:
+#        ip: 192.168.2.3
+#        env:
+#            PUPBUILDTYPE: agent
+#            PUPCERTNAME: lsst-test09.ncsa.illinois.edu
+#            PUPMASTER: 192.168.2.2
