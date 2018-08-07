@@ -34,6 +34,7 @@ while :; do
             echo "    -C CONTROL_REPO_NAME (default: '$CONTROL_REPO_NAME')"
             echo "    -d                   (enable debug mode)"
             echo "    -D HIERA_DATA_PATH   (default: '$HIERA_DATA_PATH')"
+            echo "    -G GIT_URL_BASE      (default: '$GIT_URL_BASE')"
             echo "    -H HIERA_REPO_NAME   (default: '$HIERA_REPO_NAME')"
             echo "    -L LEGACY_REPO_NAME  (default: '$LEGACY_REPO_NAME')"
             echo "    -M MODULES_PATH      (default: '$MODULES_PATH')"
@@ -52,6 +53,10 @@ while :; do
             ;;
         -D)
             HIERA_DATA_PATH=$2
+            shift
+            ;;
+        -G)
+            GIT_URL_BASE=$2
             shift
             ;;
         -H)
@@ -285,7 +290,7 @@ mk_legacy_repo_skeleton() {
         fi
         find "$repopath" -delete
     fi
-    mkdir -p "$repopath/modules"
+    mkdir -p "$repopath"
 }
 
 
@@ -294,7 +299,7 @@ cp_legacy_modules() {
     log "enter..."
     [[ "$DEBUG" -eq 1 ]] && set -x
     local site="$OUTPUT_PATH/$CONTROL_REPO_NAME/site"
-    local legacyrepo="$OUTPUT_PATH/$LEGACY_REPO_NAME/modules"
+    local legacyrepo="$OUTPUT_PATH/$LEGACY_REPO_NAME"
     local pupfn="$OUTPUT_PATH/$CONTROL_REPO_NAME/Puppetfile"
     local external_name metafn rc
     # walk through list of module dirnames

@@ -11,19 +11,20 @@ common:
     env:
         PUPFROMCOMMON: test_merge
     # commands are run in order specified here (top to bottom)
-    shell_always:
-      - cmd: |
-             chown -R root:root /vagrant/.ssh
-             chmod -R 400 /vagrant/.ssh
-             chmod 500 /vagrant/.ssh
-             ln -s /vagrant/.ssh /root/.ssh
-      - cmd: ln -s /vagrant /root/puppet_deployment
+#    shell_always:
+#      - cmd: |
+#             chown -R root:root /vagrant/.ssh
+#             chmod -R 400 /vagrant/.ssh
+#             chmod 500 /vagrant/.ssh
+#             ln -s /vagrant/.ssh /root/.ssh
+#      - cmd: ln -s /vagrant /root/puppet_deployment
     # commands are run in order specified here (top to bottom)
     shell_once:
       - cmd: xargs -r -a /vagrant/yum_pkg_list.txt yum -y install
       - cmd: |
               git config --global user.email "vagrant"
               git config --global user.name "vagrant"
+      - cmd: ln -s /vagrant /root/puppet_deployment
 
 # Define each VM
 # Hash key is the VM name (use that argument to vagrant ssh)

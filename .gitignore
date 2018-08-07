@@ -1,5 +1,5 @@
 .vagrant/
 *.log
 *.logs
-backups/
+backups
 .ssh/
