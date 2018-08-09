@@ -158,6 +158,10 @@ mk_puppetfile() {
     | sort \
     | awk "{ printf(\"mod '%s', '%s'\\n\", \$1, \$2) }" \
     >"$pupfn"
+    # Fix for globus connect server
+    sed -i '/erbc-globus/d' "$pupfn"
+    # Fix for maestrodev-wget
+    sed -i "/maestrodev-wget/c\mod 'puppet-wget', '2.0.0'" "$pupfn"
 }
 
 
@@ -187,7 +191,7 @@ add_git_submodules_to_puppetfile() {
 				}
 	\$3~/url=/  { n=split(\$0,parts,/=/)
 				  url=parts[n]
-				  format = \"mod '%s',\\n    :git: '%s'\\n    :commit: '%s'\\n\"
+				  format = \"mod '%s',\\n    :git => '%s',\\n    :commit => '%s'\\n\"
 				  printf(format, name, url, commit)
 				}
 " >> "$pupfn"

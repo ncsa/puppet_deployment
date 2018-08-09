@@ -1,6 +1,6 @@
 #!/bin/bash
 
-R10K_VERSION=6.5.1
+R10K_VERSION=6.6.1
 BASE=/root/puppet_deployment
 
 PUPPET=/opt/puppetlabs/bin/puppet

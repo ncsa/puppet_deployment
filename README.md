@@ -79,4 +79,5 @@ Relevant for testing in VM infrastructure
    1. Destroy puppet master VM
 1. Deploy R10K Puppet Server
    1. Do _Deploy R10K Puppet Server_ (above)
+   1. `r10k deploy environment -v -p`
 
