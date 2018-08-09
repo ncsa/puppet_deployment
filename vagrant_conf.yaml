@@ -10,14 +10,9 @@ defaults:
 common:
     env:
         PUPFROMCOMMON: test_merge
+        PUPBKUPDIR: /vagrant/backups
     # commands are run in order specified here (top to bottom)
 #    shell_always:
-#      - cmd: |
-#             chown -R root:root /vagrant/.ssh
-#             chmod -R 400 /vagrant/.ssh
-#             chmod 500 /vagrant/.ssh
-#             ln -s /vagrant/.ssh /root/.ssh
-#      - cmd: ln -s /vagrant /root/puppet_deployment
     # commands are run in order specified here (top to bottom)
     shell_once:
       - cmd: xargs -r -a /vagrant/yum_pkg_list.txt yum -y install
@@ -25,6 +20,9 @@ common:
               git config --global user.email "vagrant"
               git config --global user.name "vagrant"
       - cmd: ln -s /vagrant /root/puppet_deployment
+      - cmd: |
+             chown -R root:root /vagrant/.ssh
+             ln -s /vagrant/.ssh /root/.ssh
 
 # Define each VM
 # Hash key is the VM name (use that argument to vagrant ssh)
@@ -37,24 +35,23 @@ guests:
         env:
             PUPBUILDTYPE: master
             PUPCONFIGTYPE: r10k
-            PUPBKUPDIR: /vagrant/backups
     legacy:
-        hostname: puppet
+        hostname: legacy
         ip: 192.168.2.3
         memory: 3072
         env:
             PUPBUILDTYPE: master
             PUPCONFIGTYPE: restore
-            PUPBKUPDIR: /vagrant/backups
-#        synced_folders:
-#          - puppetdeploy:
-#                src: '.'
-#                dest: '/root/puppet_deployment'
-#                options:
-#                    type: smb
+    new:
+        hostname: new
+        ip: 192.168.2.4
+        memory: 3072
+        env:
+            PUPBUILDTYPE: master
+            PUPCONFIGTYPE: new
             
 #    agent01:
-#        ip: 192.168.2.3
+#        ip: 192.168.2.100
 #        env:
 #            PUPBUILDTYPE: agent
 #            PUPCERTNAME: lsst-test09.ncsa.illinois.edu

@@ -11,6 +11,7 @@ for f in "${INCLUDES[@]}"; do
     source  "$f"
 done
 
+PUPPET=/opt/puppetlabs/bin/puppet
 
 ###
 # Process cmdline
@@ -210,13 +211,9 @@ mk_hiera_conf() {
     log "enter..."
     [[ "$DEBUG" -eq 1 ]] && set -x
     local repopath="$OUTPUT_PATH/$CONTROL_REPO_NAME"
-    >"$repopath"/hiera.yaml cat <<ENDHERE
----
-version: 5
-defaults:
-    datadir: data
-    data_hash: yaml_data
-ENDHERE
+    local hiera_orig=$($PUPPET config print hiera_config)
+    local awk_cmd='/^  datadir: / {print "  datadir: data"; next} {print}'
+    >"$repopath"/hiera.yaml awk "$awk_cmd" "$hiera_orig"
 }
 
 

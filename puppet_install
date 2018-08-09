@@ -294,17 +294,17 @@ case "$BUILD_TYPE" in
                 ;;
             new)
                 configure_ca
-                create_autosign
+                #create_autosign
                 ;;
             r10k)
-                restore_config
-                disable_puppetdb
-                restore_ca
-                #configure_ca
+                #restore_config
+                #disable_puppetdb
+                #restore_ca
+                configure_ca
                 ;;
         esac
-        puppetserver start
-        is_puppetserver_running
+        #puppetserver start
+        #is_puppetserver_running
         ;;
     agent)
         agent_config
