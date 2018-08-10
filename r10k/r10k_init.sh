@@ -12,6 +12,9 @@ COMMON=$BASE/common_funcs.sh
 }
 source "$COMMON"
 
+# Remove unused (default) global hiera.yaml 
+rm -f /etc/puppetlabs/puppet/hiera.yaml
+
 # Install r10k
 $PUPPET module install puppet-r10k --version $R10K_VERSION
 $PUPPET apply $BASE/r10k/r10k_init.pp
