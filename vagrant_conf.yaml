@@ -19,6 +19,7 @@ common:
       - cmd: |
               git config --global user.email "vagrant"
               git config --global user.name "vagrant"
+              git config --global push.default simple
       - cmd: ln -s /vagrant /root/puppet_deployment
       - cmd: |
              chown -R root:root /vagrant/.ssh

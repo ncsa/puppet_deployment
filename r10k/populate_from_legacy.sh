@@ -257,22 +257,40 @@ commit_repo() {
     local default_branch=production
     [[ $# -ge 2 ]] && default_branch="$2"
     local repopath="$OUTPUT_PATH/$reponame"
+    local tmprepopath="$OUTPUT_PATH/tmp/$reponame"
     local remote_url="$GIT_URL_BASE/$reponame".git
+    local commit_msg="Initial commit"
+    local push_opts=()
     [[ -d "$repopath" ]] || die "Repopath '$repopath' directory not found"
-    # fail if remote repo already exists
+    # Check for existing repo
     git ls-remote -h "$remote_url" &>/dev/null
     local rc=$?
-    [[ "$rc" -eq 0 ]] && die "Remote git repo already exists: '$remote_url'"
-    # git returns something less than 128 if there is a different error (ie: access denied, etc.)
-    [[ "$rc" -ne 128 ]] && die "Unknown error checking for existence or remote repo: '$remote_url'"
-    (
+    if [[ "$rc" -eq 0 ]] ; then
+        # Remote repo exists
+        # Clone it, rsync new files over
+        #die "Remote git repo already exists: '$remote_url'"
+        mkdir -p $(dirname "$tmprepopath")
+        mv "$repopath" "$tmprepopath"
+        git clone "$remote_url" "$repopath"
+        rsync -rlpgo --exclude='.git*' --delete "$tmprepopath"/ "$repopath"/
+        commit_msg="automatic update $(date +%c)"
+        find "$tmprepopath" -delete
+    elif [[ "$rc" -ne 128 ]] ; then
+        # git returns something less than 128 if there is a different error (ie: access denied, etc.)
+        die "Unknown error checking for existence or remote repo: '$remote_url'"
+    else
+        # Remote repo does not exist
         cd "$repopath"
         git init
         git checkout -b "$default_branch"
         git remote add origin "$remote_url"
-        git add .
-        git commit -m 'Initial commit'
-        git push -u origin "$default_branch"
+        push_opts=( '-u' 'origin' "$default_branch" )
+    fi
+    (
+        cd "$repopath"
+        git add -A .
+        git commit -m "$commit_msg"
+        git push "${push_opts[@]}"
     ) || die "Failed to commit repo: '$reponame'"
 }
 
