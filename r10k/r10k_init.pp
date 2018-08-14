@@ -10,6 +10,6 @@ class { 'r10k':
         }
     },
     postrun => [
-        '/etc/puppetlabs/local/scripts/r10k_postrun.sh;'
+        '/etc/puppetlabs/local/scripts/r10k_postrun.sh'
     ]
 }
