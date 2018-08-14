@@ -15,12 +15,11 @@ common:
 #    shell_always:
     # commands are run in order specified here (top to bottom)
     shell_once:
-      - cmd: xargs -r -a /vagrant/yum_pkg_list.txt yum -y install
+      - cmd: /vagrant/centos75_post.sh
       - cmd: |
               git config --global user.email "vagrant"
               git config --global user.name "vagrant"
               git config --global push.default simple
-      - cmd: ln -s /vagrant /root/puppet_deployment
       - cmd: |
              chown -R root:root /vagrant/.ssh
              ln -s /vagrant/.ssh /root/.ssh
@@ -51,9 +50,9 @@ guests:
             PUPBUILDTYPE: master
             PUPCONFIGTYPE: new
             
-#    agent01:
-#        ip: 192.168.2.100
-#        env:
-#            PUPBUILDTYPE: agent
-#            PUPCERTNAME: lsst-test09.ncsa.illinois.edu
-#            PUPMASTER: 192.168.2.2
+    agent01:
+        ip: 192.168.2.100
+        env:
+            PUPBUILDTYPE: agent
+            PUPCERTNAME: lsst-test09.ncsa.illinois.edu
+            PUPMASTER: 192.168.2.4

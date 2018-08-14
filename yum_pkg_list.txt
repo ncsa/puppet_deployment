@@ -1,9 +1,0 @@
-bind-utils
-git
-iproute
-less
-lsof
-lvm2
-tree
-vim
-which
