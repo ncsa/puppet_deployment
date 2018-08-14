@@ -31,6 +31,7 @@ For both master and agent nodes
    `< /root/puppet_deployment/scripts/helper_pkgs.txt xargs yum -y install`
 ### MASTER
 #### Restore From Backup
+Restore an existing, *legacy* puppet master.
 1. `mkdir /backups`
 1. Copy backup tar.gz file into `/backups/.`
 1. `export PUPBKUPDIR=/backups`
@@ -39,8 +40,20 @@ For both master and agent nodes
 1. `/root/puppet_deployment/puppet_install`
 1. `hostname -I | xargs -n1 echo | grep 192.168` #Use this ip for agent setup
 #### Deploy R10K Puppet Server
+This is identical to a *new* server except that it restores the certificate
+authority setup from a backup.
+1. `mkdir /backups`
+1. Copy backup tar.gz file into `/backups/.`
+1. `export PUPBKUPDIR=/backups`
 1. `export PUPBUILDTYPE=master`
 1. `export PUPCONFIGTYPE=r10k`
+1. `/root/puppet_deployment/puppet_install`
+1. Edit `/root/puppet_deployment/r10k/r10k_init.pp`
+1. `/root/puppet_deployment/r10k/r10k_init.sh`
+1. `hostname -I | xargs -n1 echo | grep 192.168` #Use this ip for agent setup
+#### Deploy New Puppet Server
+1. `export PUPBUILDTYPE=master`
+1. `export PUPCONFIGTYPE=new`
 1. `/root/puppet_deployment/puppet_install`
 1. Edit `/root/puppet_deployment/r10k/r10k_init.pp`
 1. `/root/puppet_deployment/r10k/r10k_init.sh`
@@ -70,7 +83,6 @@ Relevant for testing in VM infrastructure
          1. Use `-h` commandline flag for help.
    1. Destroy puppet master VM
 1. Deploy R10K Puppet Server
-   1. Do _Deploy R10K Puppet Server_ (above)
+   1. Do either _Deploy R10K_ or _Deploy New_ Puppet Server (above)
    1. `git clone git@git.ncsa.illinois.edu:lsst/puppet/local.git /etc/puppetlabs/local`
    1. `r10k deploy environment -v -p`
-
