@@ -39,19 +39,11 @@ For both master and agent nodes
 1. `/root/puppet_deployment/puppet_install`
 1. `hostname -I | xargs -n1 echo | grep 192.168` #Use this ip for agent setup
 #### Deploy R10K Puppet Server
-1. `mkdir /backups`
-1. Copy backup tar.gz file into `/backups/.`
-1. `export PUPBKUPDIR=/backups`
 1. `export PUPBUILDTYPE=master`
 1. `export PUPCONFIGTYPE=r10k`
 1. `/root/puppet_deployment/puppet_install`
 1. Edit `/root/puppet_deployment/r10k/r10k_init.pp`
 1. `/root/puppet_deployment/r10k/r10k_init.sh`
-1. TODO
-   1. Configure r10k post-run script to:
-      1. run `puppet generate types` for each environment
-   1. Can this be included in `r10k_init.pp`?
-      1. See: https://github.com/voxpupuli/puppet-r10k/blob/master/manifests/config.pp
 1. `hostname -I | xargs -n1 echo | grep 192.168` #Use this ip for agent setup
 ### AGENT
 Relevant for testing in VM infrastructure
