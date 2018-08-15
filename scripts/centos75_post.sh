@@ -13,12 +13,19 @@ PKGLIST=( \
   python36-tools
 )
 
+PYTHON_PKGLIST=( \
+  pip \
+  pyyaml
+)
+
+set -x
+
 # Ensure EPEL repo is installed
-yum -y install epel
+yum -y install epel-release
 
 # Install packages
-yum -y install
+yum -y install "${PKGLIST[@]}"
 
 # Setup Python3
 python36 -m ensurepip
-python36 -m pip install -U pip pyyaml
+python36 -m pip install -U "${PYTHON_PKGLIST[@]}"
