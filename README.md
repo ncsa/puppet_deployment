@@ -75,7 +75,7 @@ Relevant for testing in VM infrastructure
    ```
 1. puppet agent -t
 
-# Migrate legacy deployment to r10k deployment
+# Sample - Migrate legacy deployment to r10k deployment
 1. Create and populate _control_ repo(s)
    1. Do _Restore From Backup_ (above)
    1. Connect to puppet master VM
@@ -84,5 +84,7 @@ Relevant for testing in VM infrastructure
    1. Destroy puppet master VM
 1. Deploy R10K Puppet Server
    1. Do either _Deploy R10K_ or _Deploy New_ Puppet Server (above)
-   1. `git clone git@git.ncsa.illinois.edu:lsst/puppet/local.git /etc/puppetlabs/local`
-   1. `r10k deploy environment -v -p`
+   1. Do custom setup
+      1. `git clone git@git.ncsa.illinois.edu:lsst/puppet/local.git /etc/puppetlabs/local`
+      1. `/etc/puppetlabs/local/scripts/configure_enc.sh`
+   1. `r10k deploy environment -v debug -p`
