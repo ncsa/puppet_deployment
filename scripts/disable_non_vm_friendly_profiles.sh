@@ -5,7 +5,7 @@ ENVDIR=$( $PUPPET config print environmentpath )
 
 now=$(date +%s)
 for env in $(ls -d $ENVDIR/*); do
-    manifestdir=$env/modules/role/manifests
+    manifestdir=$env/site/role/manifests
     find $manifestdir -mindepth 1 -maxdepth 1 -name '*.pp' \
     | while read; do
         bak=${REPLY}.$now
