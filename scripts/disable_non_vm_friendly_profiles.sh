@@ -11,11 +11,16 @@ for env in $(ls -d $ENVDIR/*); do
         bak=${REPLY}.$now
         cp $REPLY $bak
         awk '
-/allow_qualys_scan/ && ! /#/ { print "#",$0; next }
-/gpfs/              && ! /#/ { print "#",$0; next }
-/telegraf/          && ! /#/ { print "#",$0; next }
-/yum_client/        && ! /#/ { print "#",$0; next }
-/slurm/             && ! /#/ { print "#",$0; next }
+/allow_qualys_scan/     && ! /#/ { print "#",$0; next }
+/globus_connect_server/ && ! /#/ { print "#",$0; next }
+/gpfs/                  && ! /#/ { print "#",$0; next }
+/kubernetes/            && ! /#/ { print "#",$0; next }
+/monitor/               && ! /#/ { print "#",$0; next }
+/nfsmount/              && ! /#/ { print "#",$0; next }
+/slurm/                 && ! /#/ { print "#",$0; next }
+/singularity/           && ! /#/ { print "#",$0; next }
+/telegraf/              && ! /#/ { print "#",$0; next }
+/yum_client/            && ! /#/ { print "#",$0; next }
 {print}
 ' $bak > $REPLY
     done
