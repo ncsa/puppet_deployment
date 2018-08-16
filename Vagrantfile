@@ -19,7 +19,12 @@ Vagrant.configure("2") do |config|
         data = defaults.merge( nodeData )
         config.vm.define nodeName do |node|
             node.vm.box = data['box']
-            node.vm.hostname = data['hostname'] if data.key? 'hostname'
+            one two three
+            if data.key? 'hostname'
+                node.vm.hostname = data['hostname']
+            else
+                node.vm.hostname = nodeName
+            end
             node.vm.network "private_network", network_options( data )
             node.vm.provider :virtualbox do |vb|
                 vb.memory = data['memory'] if data.key? 'memory'
