@@ -19,7 +19,6 @@ Vagrant.configure("2") do |config|
         data = defaults.merge( nodeData )
         config.vm.define nodeName do |node|
             node.vm.box = data['box']
-            one two three
             if data.key? 'hostname'
                 node.vm.hostname = data['hostname']
             else
