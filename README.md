@@ -15,10 +15,10 @@
 1. `vagrant up`
 1. `vagrant ssh master`
    1. `sudo su -`
-   1. `/root/puppet_deployment/puppet_install`
+   1. `/opt/puppetlabs/bin/puppetserver start`
+   1. `lsof -i :8140`
 1. `vagrant ssh agent`
    1. `sudo su -`
-   1. `/root/puppet_deployment/puppet_install`
    1. `puppet agent -t`
 
 
