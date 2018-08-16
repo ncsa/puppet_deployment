@@ -27,6 +27,7 @@ dumpvars() {
 
 
 ask_yes_no() {
+    [[ "$ALWAYSYES" -eq 1 ]] && return 0
     local rv=1
     local msg="Is this ok?"
     [[ -n "$1" ]] && msg="$1"
@@ -43,6 +44,7 @@ ask_yes_no() {
 
 
 continue_or_exit() {
+    [[ "$ALWAYSYES" -eq 1 ]] && return 0
     [[ -n "$1" ]] && echo "$1"
     shift
     local pause=60

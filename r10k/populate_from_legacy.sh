@@ -136,13 +136,8 @@ mk_control_repo_skeleton() {
     [[ $DEBUG -gt 0 ]] && set -x
     local repopath="$OUTPUT_PATH/$CONTROL_REPO_NAME"
     if [[ -d "$repopath" ]] ; then
-        if [[ "$ALWAYSYES" -eq 1 ]] ; then
-            : #pass
-        elif ask_yes_no "Directory exists, ok to delete: ['$repopath'] ?" ; then
-            : #pass
-        else
-            die "Directory exists: ['$repopath']"
-        fi
+        ask_yes_no "Directory exists, ok to delete: ['$repopath'] ?" \
+        || die "Directory exists: ['$repopath']"
         find "$repopath" -delete
     fi
     mkdir -p "$repopath"/{scripts,site,modules}
@@ -159,7 +154,7 @@ mk_puppetfile() {
     | awk "{ printf(\"mod '%s', '%s'\\n\", \$1, \$2) }" \
     >"$pupfn"
     # Fix for globus connect server
-    sed -i '/erbc-globus/d' "$pupfn"
+    sed -i '/ebrc-globus/d' "$pupfn"
     # Fix for maestrodev-wget
     sed -i "/maestrodev-wget/c\mod 'puppet-wget', '2.0.0'" "$pupfn"
 }
@@ -296,6 +291,10 @@ commit_repo() {
         git commit -m "$commit_msg"
         git push "${push_opts[@]}"
     ) || die "Failed to commit repo: '$reponame'"
+    # Create a test branch
+    cd "$repopath"
+    git checkout -b test
+    git push -u origin test
 }
 
 
@@ -304,13 +303,8 @@ mk_legacy_repo_skeleton() {
     [[ $DEBUG -gt 0 ]] && set -x
     local repopath="$OUTPUT_PATH/$LEGACY_REPO_NAME"
     if [[ -d "$repopath" ]] ; then
-        if [[ "$ALWAYSYES" -eq 1 ]] ; then
-            : #pass
-        elif ask_yes_no "Directory exists, ok to delete: ['$repopath'] ?" ; then
-            : #pass
-        else
-            die "Directory exists: ['$repopath']"
-        fi
+        ask_yes_no "Directory exists, ok to delete: ['$repopath'] ?" \
+        || die "Directory exists: ['$repopath']"
         find "$repopath" -delete
     fi
     mkdir -p "$repopath"
@@ -330,6 +324,9 @@ cp_legacy_modules() {
     | while read dirpath; do
         metafn="$dirpath"/metadata.json
         if [[ "${dirpath##*/}" == "gpfs" ]] ; then
+            # skip gpfs
+            :
+        elif [[ "${dirpath##*/}" == "globus_connect_server" ]] ; then
             # skip gpfs
             :
         elif [[ "${dirpath##*/}" == "role" ]] ; then
@@ -361,13 +358,8 @@ mk_hiera_repo_skeleton() {
     [[ $DEBUG -gt 0 ]] && set -x
     local repopath="$OUTPUT_PATH/$HIERA_REPO_NAME"
     if [[ -d "$repopath" ]] ; then
-        if [[ "$ALWAYSYES" -eq 1 ]] ; then
-            : #pass
-        elif ask_yes_no "Directory exists, ok to delete: ['$repopath'] ?" ; then
-            : #pass
-        else
-            die "Directory exists: ['$repopath']"
-        fi
+        ask_yes_no "Directory exists, ok to delete: ['$repopath'] ?" \
+        || die "Directory exists: ['$repopath']"
         find "$repopath" -delete
     fi
     mkdir -p "$repopath"
