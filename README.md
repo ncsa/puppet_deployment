@@ -88,3 +88,5 @@ Relevant for testing in VM infrastructure
       1. `git clone git@git.ncsa.illinois.edu:lsst/puppet/local.git /etc/puppetlabs/local`
       1. `/etc/puppetlabs/local/scripts/configure_enc.sh`
    1. `r10k deploy environment -v debug -p`
+   1. (VM Testing - optional) \
+      `/root/puppetdeployment/scripts/disable_non_vm_friendly_profiles.sh`
