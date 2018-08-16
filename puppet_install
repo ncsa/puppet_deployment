@@ -16,7 +16,7 @@ PUPPET=/opt/puppetlabs/bin/puppet
 PUPPETSRVR=/opt/puppetlabs/bin/puppetserver
 PUPPET_REPO_URL=https://yum.puppetlabs.com/puppetlabs-release-pc1-el-7.noarch.rpm
 HOSTNAME=$(hostname)
-DNS_ALT_NAMES=$( hostname -I | awk '{print $1}' )
+DNS_ALT_NAMES=
 REQUIRED_PKGS_COMMON=( bind-utils lsof )
 REQUIRED_PKGS_MASTER=( PyYAML )
 REQUIRED_PKGS_AGENT=()
@@ -27,7 +27,7 @@ DEBUG=0
 BKUP_DIR="${PUPBKUPDIR:-/backups}"
 BUILD_TYPE="$PUPBUILDTYPE"           #master | agent (allow to be set by env var)
 CONFIG_TYPE="$PUPCONFIGTYPE"         #new | restore | r10k (allow env var)
-AGENT_CERT_NAME="$PUPCERTNAME"       #allow override hostname
+AGENT_CERTNAME="$PUPCERTNAME"       #allow override hostname
 AGENT_PUPMASTER="$PUPMASTER"         #ip or valid DNS hostname of pupmaster
 
 
@@ -51,7 +51,7 @@ while :; do
             ;;
         -a) BUILD_TYPE=agent
             ;;
-        -A) AGENT_CERT_NAME="$2"
+        -A) AGENT_CERTNAME="$2"
             shift
             ;;
         -b) BKUP_DIR="$2"
@@ -202,10 +202,14 @@ configure_ca() {
         log 'CA already configured, skipping.'
         return 0
     }
+
+    ip_addrs=( $(hostname -I) )
+    all_alts=( "${ip_addrs[@]}" "${DNS_ALT_NAMES[@]}" )
+    alt_names=$( IFS=','; cat <<< "${all_alts[*]}" )
     $PUPPET cert list -a
     $PUPPET config set certname $HOSTNAME --section master
     $PUPPET certificate generate \
-        ${DNS_ALT_NAMES:+--dns-alt-names $DNS_ALT_NAMES} \
+        --dns-alt-names $alt_names \
         --ca-location local \
         $HOSTNAME
     $PUPPET cert sign $HOSTNAME --allow-dns-alt-names
@@ -294,13 +298,11 @@ case "$BUILD_TYPE" in
                 ;;
             new)
                 configure_ca
-                #create_autosign
+                create_autosign
                 ;;
             r10k)
-                #restore_config
-                #disable_puppetdb
-                #restore_ca
-                configure_ca
+                restore_ca
+                create_autosign
                 ;;
         esac
         #puppetserver start
