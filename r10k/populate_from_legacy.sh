@@ -230,7 +230,11 @@ mk_config_version() {
     local tmpfn=$(mktemp)
     curl -sSo "$tmpfn" "$CONFIG_VERSION_URL" \
     || die "download failed for config_version.sh"
-    sed -e "1 a \#\n\#\n\# Copied from: $CONFIG_VERSION_URL\n\n" "$tmpfn" > $tgtfn
+    ( head -1 "$tmpfn"
+      sed -e "1 a \#\n\# Copied from: $CONFIG_VERSION_URL\n\#\n" <<< ""
+      tail -n +2 "$tmpfn"
+    ) > $tgtfn
+    chmod +x $tgtfn
     rm $tmpfn
 }
 
