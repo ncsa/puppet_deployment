@@ -12,7 +12,8 @@ common:
         PUPFROMCOMMON: test_merge
         PUPBKUPDIR: /vagrant/backups
     # commands are run in order specified here (top to bottom)
-#    shell_always:
+    shell_always:
+      - cmd: chown -R root:root /vagrant/.ssh
     # commands are run in order specified here (top to bottom)
     shell_once:
       - cmd: /vagrant/scripts/centos75_post.sh
@@ -20,9 +21,9 @@ common:
              git config --global user.email "vagrant"
              git config --global user.name "vagrant"
              git config --global push.default simple
-             chown -R root:root /vagrant/.ssh
              ln -s /vagrant/.ssh /root/.ssh
              ln -s /vagrant /root/puppet_deployment
+      - cmd: /vagrant/puppet_install
 
 # Define each VM
 # Hash key is the VM name (use that argument to vagrant ssh)
@@ -43,7 +44,7 @@ guests:
             PUPBUILDTYPE: master
             PUPCONFIGTYPE: restore
     new:
-        hostname: new
+        hostname: adm01.ncsa.illinois.edu
         ip: 192.168.2.4
         memory: 3072
         env:
