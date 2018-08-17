@@ -7,6 +7,7 @@ PKGLIST=( \
   less \
   lsof \
   lvm2 \
+  net-tools \
   tree \
   vim \
   which \
