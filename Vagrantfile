@@ -18,6 +18,7 @@ Vagrant.configure("2") do |config|
     guests.each do |nodeName, nodeData|
         data = defaults.merge( nodeData )
         config.vm.define nodeName do |node|
+            # Host Details
             node.vm.box = data['box']
             if data.key? 'hostname'
                 node.vm.hostname = data['hostname']
@@ -29,26 +30,33 @@ Vagrant.configure("2") do |config|
                 vb.memory = data['memory'] if data.key? 'memory'
             end
 
-            # Set Environment Variables
+            # Forwarded Ports
+            portData = concat_child_arrays( common, data, 'forwarded_ports' )
+#            puts "portData for node '#{nodeName}'"
+#            pp portData
+            forwarded_ports( node.vm, portData )
+
+            # Environment Variables
             envData = merge_child_hashes( data, common, 'env' )
 #            puts "envData for node '#{nodeName}'"
 #            pp envData
             setenv( node.vm, envData )
 
-            # Synced Folders
-            syncData = concat_child_arrays( data, common, 'synced_folders' )
-#            puts "syncData for node '#{nodeName}'"
-#            pp syncData
-            custom_synced_folders( node.vm, syncData )
+#            # Synced Folders
+#            TODO doesnt work, needs fixing
+#            syncData = concat_child_arrays( common, data, 'synced_folders' )
+##            puts "syncData for node '#{nodeName}'"
+##            pp syncData
+#            custom_synced_folders( node.vm, syncData )
 
             # Shell Provisioners (always)
-            alwaysData = concat_child_arrays( data, common, 'shell_always' )
+            alwaysData = concat_child_arrays( common, data, 'shell_always' )
 #            puts "alwaysData for node '#{nodeName}'"
 #            pp alwaysData
             shell_provisioners_always( node.vm, alwaysData )
 
             # Shell Provisioners (once)
-            onceData = concat_child_arrays( data, common, 'shell_once' )
+            onceData = concat_child_arrays( common, data, 'shell_once' )
 #            puts "onceData for node '#{nodeName}'"
 #            pp onceData
             shell_provisioners_once( node.vm, onceData )

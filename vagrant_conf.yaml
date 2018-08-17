@@ -50,7 +50,19 @@ guests:
         env:
             PUPBUILDTYPE: master
             PUPCONFIGTYPE: new
-            
+    git:
+        hostname: lsst-cm.ncsa.illinois.edu
+        ip: 192.168.2.22
+        env:
+            PUPBUILDTYPE: agent
+            PUPMASTER: 192.168.2.4
+        # common commands are run before node specific commands
+#        shell_once:
+#          - cmd: /vagrant/scripts/cm_setup.sh
+        forwarded_ports:
+          - guest: 3000
+            host: 3000
+
     agent01:
         ip: 192.168.2.100
         env:
