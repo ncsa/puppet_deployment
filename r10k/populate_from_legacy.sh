@@ -266,35 +266,35 @@ commit_repo() {
     local rc=$?
     if [[ "$rc" -eq 0 ]] ; then
         # Remote repo exists
-        # Clone it, rsync new files over
-        #die "Remote git repo already exists: '$remote_url'"
+        # Move local contents aside
         mkdir -p $(dirname "$tmprepopath")
         mv "$repopath" "$tmprepopath"
+        # Ensure remote repo is empty
         git clone "$remote_url" "$repopath"
+        cd "$repopath"
+        local num_commits=$( find "$repopath"/.git/objects -type f | wc -l )
+        [[ $num_commits -eq 0 ]] || die "Remote repo '$remote_url' is not empty"
+        # Rsync local contents
         rsync -rlpgo --exclude='.git*' --delete "$tmprepopath"/ "$repopath"/
-        commit_msg="automatic update $(date +%c)"
         find "$tmprepopath" -delete
+        # Commit local repo to remote
+        git checkout -b "$default_branch"
+        git add -A .
+        git commit -m 'Initial commit'
+        git push -u origin "$default_branch" \
+        || die "Failed to commit repo: '$reponame'"
+        # Create a test branch
+        cd "$repopath"
+        git checkout -b test
+        git push -u origin test
     elif [[ "$rc" -ne 128 ]] ; then
         # git returns something less than 128 if there is a different error (ie: access denied, etc.)
         die "Unknown error checking for existence or remote repo: '$remote_url'"
     else
         # Remote repo does not exist
-        cd "$repopath"
-        git init
-        git checkout -b "$default_branch"
-        git remote add origin "$remote_url"
-        push_opts=( '-u' 'origin' "$default_branch" )
+        # remote creation doesn't work for Gitea
+        die "Repo '$remote_url' does not exist"
     fi
-    (
-        cd "$repopath"
-        git add -A .
-        git commit -m "$commit_msg"
-        git push "${push_opts[@]}"
-    ) || die "Failed to commit repo: '$reponame'"
-    # Create a test branch
-    cd "$repopath"
-    git checkout -b test
-    git push -u origin test
 }
 
 
