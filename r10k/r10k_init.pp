@@ -1,15 +1,15 @@
 class { 'r10k':
     sources => {
         'control' => {
-            'remote'  => "git@git.ncsa.illinois.edu:lsst/puppet/control.git",
+            'remote'  => "ssh://git@192.168.2.22:3022/lsst-puppet/control.git",
             'basedir' => "${::settings::codedir}/environments",
         },
         'hiera' => {
-            'remote'  => "git@git.ncsa.illinois.edu:lsst/puppet/hiera.git",
+            'remote'  => "ssh://git@192.168.2.22:3022/lsst-puppet/hiera.git",
             'basedir' => "${::settings::codedir}/data",
         },
         'legacy' => {
-            'remote'  => "git@git.ncsa.illinois.edu:lsst/puppet/legacy.git",
+            'remote'  => "ssh://git@192.168.2.22:3022/lsst-puppet/legacy.git",
             'basedir' => "${::settings::codedir}/legacy",
         }
     },
