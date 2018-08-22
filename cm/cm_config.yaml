@@ -1,0 +1,19 @@
+#gitlab::skip_auto_reconfigure: present
+gitlab::external_url: http://192.168.2.22
+
+gitlab::gitlab_rails:
+    time_zone: America/Chicago
+    gitlab_email_from: aloftus@illinois.edu
+    gitlab_email_display_name: aloftus@illinois.edu
+    gitlab_email_reply_to: aloftus@illinois.edu
+    smtp_enable: true
+
+gitlab::nginx:
+    redirect_http_to_https: false
+    listen_addresses:
+      - 192.168.2.22
+#    ssl_certificate:
+#    ssl_certificate_key:
+
+gitlab::prometheus:
+    enable: false
