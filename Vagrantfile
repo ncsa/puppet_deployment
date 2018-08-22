@@ -28,6 +28,7 @@ Vagrant.configure("2") do |config|
             node.vm.network "private_network", network_options( data )
             node.vm.provider :virtualbox do |vb|
                 vb.memory = data['memory'] if data.key? 'memory'
+                vb.cpus = data['cpus'] if data.key? 'cpus'
             end
 
             # Forwarded Ports

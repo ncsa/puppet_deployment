@@ -39,7 +39,6 @@ guests:
     legacy:
         hostname: legacy
         ip: 192.168.2.3
-        memory: 3072
         env:
             PUPBUILDTYPE: master
             PUPCONFIGTYPE: restore
@@ -50,18 +49,20 @@ guests:
         env:
             PUPBUILDTYPE: master
             PUPCONFIGTYPE: new
-    git:
+    cm:
         hostname: lsst-cm.ncsa.illinois.edu
         ip: 192.168.2.22
+        memory: 4096
+        cpus: 2
         env:
             PUPBUILDTYPE: agent
             PUPMASTER: 192.168.2.4
-        # common commands are run before node specific commands
+#        # "common" commands are run before node specific commands
 #        shell_once:
-#          - cmd: /vagrant/scripts/cm_setup.sh
+#          - cmd: /vagrant/cm/install.sh
         forwarded_ports:
-          - guest: 3000
-            host: 3000
+          - guest: 8765
+            host: 8765
 
     agent01:
         ip: 192.168.2.100
