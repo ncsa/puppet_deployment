@@ -1,10 +1,10 @@
 #!/bin/bash
 
 MODULE_VERSION=2.1.0
+MODULE_NAME=gitlab
 BASE=/root/puppet_deployment
 CONFDIR=$BASE/cm
 CODEDIR=$BASE/cm/code
-PUPPETLABS=/etc/puppetlabs
 PUPPET=/opt/puppetlabs/bin/puppet
 COMMON=$BASE/common_funcs.sh
 
@@ -18,23 +18,23 @@ prerun() {
     : #pass
 }
 
-install() {
-    # Install gitlab puppet module
-    $PUPPET module install puppet-gitlab \
+puppet_module_install() {
+    # Install puppet module
+    $PUPPET module install puppet-$MODULE_NAME \
         --basemodulepath $CODEDIR \
         --modulepath $CODEDIR \
         --confdir $CONFDIR \
         --version $MODULE_VERSION
 }
 
-apply() {
+puppet_module_apply() {
     # Perform gitlab install
     $PUPPET apply \
         --test \
         --basemodulepath $CODEDIR \
         --modulepath $CODEDIR \
         --confdir $CONFDIR \
-        --execute 'include gitlab'
+        --execute "include $MODULE_NAME"
 }
 
 postrun() {
@@ -45,8 +45,8 @@ set -x
 
 prerun
 
-install
+puppet_module_install
 
-apply
+puppet_module_apply
 
 postrun
