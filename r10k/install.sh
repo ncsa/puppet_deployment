@@ -35,7 +35,10 @@ puppet_module_apply() {
 
 postrun() {
     # Clean up install junk from global modules dir
-    find /etc/puppetlabs/code/modules -mindepth 1 -delete
+    local paths=( $( puppet config print modulepath | tr ':' ' ' ) )
+    for dir in "${paths[@]}"; do
+        find $dir -mindepth 1 -delete
+    done
 }
 
 set -x
