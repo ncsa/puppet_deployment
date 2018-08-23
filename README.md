@@ -16,8 +16,7 @@ The vagrant VM's are all based on CentOS 7.5.
       1. `r10k/r10k/populate_from_legacy.sh`
       1. `r10k/manifest.pp`
       1. `scripts/disable_non_vm_friendly_profiles.sh`
-1. _(optional)_ Create a common `.ssh` setup
-This is handy for automated git access from the puppet master.
+1. _(optional)_ Create a common `.ssh` setup (enables automated git access from the puppet master)
    1. `mkdir .ssh`
    1. `ssh-keygen -t ecdsa -b 521 -f .ssh/id_ecdsa`
    1. `echo 'User atestuser' >.ssh/config`
