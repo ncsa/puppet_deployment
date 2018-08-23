@@ -16,7 +16,6 @@ PUPPET=/opt/puppetlabs/bin/puppet
 PUPPETSRVR=/opt/puppetlabs/bin/puppetserver
 PUPPET_REPO_URL=https://yum.puppetlabs.com/puppetlabs-release-pc1-el-7.noarch.rpm
 HOSTNAME=$(hostname)
-DNS_ALT_NAMES=
 REQUIRED_PKGS_COMMON=( bind-utils lsof )
 REQUIRED_PKGS_MASTER=( PyYAML )
 REQUIRED_PKGS_AGENT=()
@@ -27,8 +26,9 @@ DEBUG=0
 BKUP_DIR="${PUPBKUPDIR:-/backups}"
 BUILD_TYPE="$PUPBUILDTYPE"           #master | agent (allow to be set by env var)
 CONFIG_TYPE="$PUPCONFIGTYPE"         #new | restore | r10k (allow env var)
-AGENT_CERTNAME="$PUPCERTNAME"       #allow override hostname
+AGENT_CERTNAME="$PUPCERTNAME"        #allow override hostname
 AGENT_PUPMASTER="$PUPMASTER"         #ip or valid DNS hostname of pupmaster
+DNS_ALT_NAMES="$PUPCAALTNAMES"       #dns alt names for puppet certificate
 
 
 ###
@@ -43,6 +43,7 @@ while :; do
             echo "    -A <AgentCertname>    (override certname, defaults to hostname)"
             echo "    -b <backup_dir>       (path to backup directory, containing *_puppet_config.tar.gz files)"
             echo "    -d                    (enable debug mode)"
+            echo "    -D <dns_alt_names>    (Comma separated list of alternate names for puppet CA certificate)"
             echo "    -m                    (build a master)"
             echo "    -M <new|restore|r10k> (how to configure puppet master)"
             echo "    -P <Puppet Master IP> (IP or hostname of puppet master, used only for agent build type)"
@@ -59,6 +60,9 @@ while :; do
             ;;
         -d) VERBOSE=1
             DEBUG=1
+            ;;
+        -D) DNS_ALT_NAMES="$2"
+            shift
             ;;
         -m) BUILD_TYPE=master
             ;;
@@ -203,9 +207,9 @@ configure_ca() {
         return 0
     }
 
-    ip_addrs=( $(hostname -I) )
-    all_alts=( "${ip_addrs[@]}" "${DNS_ALT_NAMES[@]}" )
-    alt_names=$( IFS=','; cat <<< "${all_alts[*]}" )
+    local ip_addrs=( $(hostname -I) )
+    local all_alts=( "${ip_addrs[@]}" "$DNS_ALT_NAMES" )
+    local alt_names=$( IFS=','; cat <<< "${all_alts[*]}" )
     $PUPPET cert list -a
     $PUPPET config set certname $HOSTNAME --section master
     $PUPPET certificate generate \
