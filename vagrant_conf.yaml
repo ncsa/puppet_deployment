@@ -49,8 +49,9 @@ guests:
         env:
             PUPBUILDTYPE: master
             PUPCONFIGTYPE: new
-    cm:
-        hostname: lsst-cm.ncsa.illinois.edu
+    # data store
+    git:
+        hostname: lsst-git.ncsa.illinois.edu
         ip: 192.168.2.22
         memory: 4096
         cpus: 2

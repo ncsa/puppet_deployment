@@ -3,8 +3,8 @@
 MODULE_VERSION=2.1.0
 MODULE_NAME=gitlab
 BASE=/root/puppet_deployment
-CONFDIR=$BASE/cm
-CODEDIR=$BASE/cm/code
+CONFDIR=$BASE/git
+CODEDIR=$BASE/git/code
 PUPPET=/opt/puppetlabs/bin/puppet
 COMMON=$BASE/common_funcs.sh
 
