@@ -1,92 +1,89 @@
-# Quickstart
+# Summary
+Define a process to (re-)build, from scratch, a configuration management environment consisting of a version controled Data Store (gitlab) and OS Configuration Manager (puppet). The initial purpose is to provide a migration path from a *legacy* (outdated, manual) puppet setup to a more recent, automated setup managed by *r10k*.
 
-## Vagrant
+# Test setup using Vagrant
+The vagrant definitions and scripts are useful to provide a test of the scripts and the overall deployment model.
+The vagrant VM's are all based on CentOS7.
+
+### Install
 1. `git clone https://github.com/ncsa/puppet_deployment.git`
 1. `cd puppet_deployment`
-1. _(optional)_ Edit _vagrant_conf.yaml_ before starting VM's
-   * For master node, set environment variables:
-     * PUPBUILDTYPE=master
-     * PUPCONFIGTYPE (valid values: _new_, _restore_, _r10k_) (_See below for more details_)
-     * PUPBKUPDIR=_\<path to directory where puppet_backup.tgz exists\>_
-   * For agent node(s), set environment variables:
-     * PUPBUILDTYPE=agent
-     * PUPMASTER=_\<ip address of master node from above\>_
-     * PUPCERTNAME=_<override hostname if desired>_ (this is optional, puppet will default to use hostname if this is unset)
-1. `vagrant up`
-1. `vagrant ssh master`
+### Review configuration
+1. _(optional)_ Review configuration
+   1. Relevant configuration files
+      1. `vagrant_conf.yaml`
+      1. `gitlab/data/common.yaml`
+      1. `r10k/r10k/populate_from_legacy.sh`
+      1. `r10k/manifest.pp`
+      1. `scripts/disable_non_vm_friendly_profiles.sh`
+1. _(optional)_ Create a common `.ssh` setup
+   1. `mkdir .ssh`
+   1. `ssh-keygen -t ecdsa -b 521 -f .ssh/id_ecdsa`
+   1. `echo 'User atestuser' >.ssh/config`
+   1. `echo 'IdentityFile /vagrant/.ssh/id_ecdsa' >>.ssh/config`
+   1. `echo 'StrictHostKeyChecking no' >>.ssh/config`
+   1. `chmod 0600 .ssh/*`
+   1. `chmod 0700 .ssh`
+### Gitlab
+1. Create a Gitlab server
+   1. `vagrant up git`
+   1. `/root/puppet_deployment/gitlab/install.sh`
+   1. Login to web interface
+      1. Create a user
+         1. If you created a common `.ssh` config above, use that username
+      1. Add SSH key
+      1. Create group
+         1. Note that the group name will need to 
+### Puppet Master
+1. `vagrant up new`
+1. `vagrant ssh new`
    1. `sudo su -`
+   1. `/root/puppet_deployment/scripts/disable_non_vm_friendly_profiles.sh`
    1. `/opt/puppetlabs/bin/puppetserver start`
    1. `lsof -i :8140`
-1. `vagrant ssh agent`
+### Puppet Agent
+1. `vagrant up agent01`
+1. `vagrant ssh agent01`
    1. `sudo su -`
    1. `puppet agent -t`
 
 
-## Physical Host (or other VM)
+# Deploy for production (on a physical host or other VM)
 ### Common
-For both master and agent nodes
+For both gitlab and puppet master nodes
 1. `yum -y install git; yum -y upgrade && reboot`
 1. `cd /root; git clone https://github.com/ncsa/puppet_deployment.git`
-1. (optional) \
-   `< /root/puppet_deployment/scripts/helper_pkgs.txt xargs yum -y install`
-### MASTER
-#### Restore From Backup
-Restore an existing, *legacy* puppet master.
-1. `mkdir /backups`
-1. Copy backup tar.gz file into `/backups/.`
-1. `export PUPBKUPDIR=/backups`
-1. `export PUPBUILDTYPE=master`
-1. `export PUPCONFIGTYPE=restore`
-1. `/root/puppet_deployment/puppet_install`
-1. `hostname -I | xargs -n1 echo | grep 192.168` #Use this ip for agent setup
-#### Deploy R10K Puppet Server
-This is identical to a *new* server except that it restores the certificate
-authority setup from a backup.
-1. `mkdir /backups`
-1. Copy backup tar.gz file into `/backups/.`
-1. `export PUPBKUPDIR=/backups`
-1. `export PUPBUILDTYPE=master`
-1. `export PUPCONFIGTYPE=r10k`
-1. `/root/puppet_deployment/puppet_install`
-1. Edit `/root/puppet_deployment/r10k/r10k_init.pp`
-1. `/root/puppet_deployment/r10k/r10k_init.sh`
-1. `hostname -I | xargs -n1 echo | grep 192.168` #Use this ip for agent setup
-#### Deploy New Puppet Server
-1. `export PUPBUILDTYPE=master`
-1. `export PUPCONFIGTYPE=new`
-1. `/root/puppet_deployment/puppet_install`
-1. Edit `/root/puppet_deployment/r10k/r10k_init.pp`
-1. `/root/puppet_deployment/r10k/r10k_init.sh`
-1. `hostname -I | xargs -n1 echo | grep 192.168` #Use this ip for agent setup
-### AGENT
-Relevant for testing in VM infrastructure
-1. `export PUPBUILDTYPE=agent`
-1. `export PUPMASTER=<IPADDR>` \
-    ...where `<IPADDR>` is the ip of the puppet master
-1. (optional) \
-   `export PUPCERTNAME=<hostname.fqdn>` \
-    ...where `hostname.fqdn` is optional and allows the VM agent to impersonate \
-       a live node that already exists in the puppet master's ENC.
-1. `/root/puppet_deployment/puppet_install`
-1. (optional) configure attached volume
-   ```
-   parted <device> mklabel gpt unit '%' mkpart '/qserv' 0 100
-   mkfs -t xfs -L '/qserv' <device>
-   ```
-1. puppet agent -t
+1. `/root/puppet_deployment/scripts/centos75_post.sh`
+### Gitlab
+1. _(**Common** steps from above)_
+1. `/root/puppet_deployment/puppet_install -a -d`
+1. Edit `/root/puppet_deployment/gitlab/data/common.yaml`
+1. `/root/puppet_deployment/gitlab/install.sh`
+1. _TODO: restore from backup_
+### Puppet master
+1. _(**Common** steps from above)_
+1. `/root/puppet_deployment/puppet_install -m -M new -d`
+1. Edit `/root/puppet_deployment/r10k/manifest.pp`
+1. `/root/puppet_deployment/r10k/install.sh`
+1. `git clone git@git.ncsa.illinois.edu:lsst/puppet/local.git /etc/puppetlabs/local`
+1. `/etc/puppetlabs/local/scripts/configure_enc.sh`
+1. `r10k deploy environment -p -v debug`
+
 
 # Sample - Migrate legacy deployment to r10k deployment
-1. Create and populate _control_ repo(s)
-   1. Do _Restore From Backup_ (above)
-   1. Connect to puppet master VM
-      1. `/root/puppet_deployment/r10k/populate_from_legacy.sh`
-         1. Use `-h` commandline flag for help.
-   1. Destroy puppet master VM
-1. Deploy R10K Puppet Server
-   1. Do either _Deploy R10K_ or _Deploy New_ Puppet Server (above)
-   1. Do custom setup
-      1. `git clone git@git.ncsa.illinois.edu:lsst/puppet/local.git /etc/puppetlabs/local`
-      1. `/etc/puppetlabs/local/scripts/configure_enc.sh`
-   1. `r10k deploy environment -v debug -p`
-   1. (VM Testing - optional) \
-      `/root/puppet_deployment/scripts/disable_non_vm_friendly_profiles.sh`
+This is best done using vagrant, since there is no need to keep the contents once the repos are published to a gitlab server.
+1. `git clone https://github.com/ncsa/puppet_deployment.git`
+1. `cd puppet_deployment`
+1. `mkdir /backups`
+1. Copy backup tar.gz file into `/backups/.`
+1. `vagrant up legacy`
+1. `vagrant ssh legacy`
+   1. `sudo su -`
+   1. `/root/puppet_deployment/r10k/populate_from_legacy.sh -G git@GITLAB.SERVER:PROJECTNAME`
+      1. Where `git@GITLAB.SERVER:PROJECTNAME` is the base url for where puppet control repo's will live
+Puppet control repos are now created and populated on _GITLAB.SERVER_ in project _PROJECTNAME_
+
+# Future work
+* Backup procedure for the gitlab server content (and config?)
+* Ability to *restore from backup* for a the gitlab deployment
+* (Re-)Deploy procedure for hardware provisioning (xCAT)
