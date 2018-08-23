@@ -49,7 +49,7 @@ guests:
         env:
             PUPBUILDTYPE: master
             PUPCONFIGTYPE: new
-    # data store
+#            PUPCAALTNAMES: lsst-adm01,adm01
     git:
         hostname: lsst-git.ncsa.illinois.edu
         ip: 192.168.2.22
