@@ -36,6 +36,7 @@ while :; do
             echo "    -d                   (enable debug mode)"
             echo "    -D HIERA_DATA_PATH   (default: '$HIERA_DATA_PATH')"
             echo "    -G GIT_URL_BASE      (default: '$GIT_URL_BASE')"
+            echo "                          Note: set to null to disable git push"
             echo "    -H HIERA_REPO_NAME   (default: '$HIERA_REPO_NAME')"
             echo "    -L LEGACY_REPO_NAME  (default: '$LEGACY_REPO_NAME')"
             echo "    -M MODULES_PATH      (default: '$MODULES_PATH')"
@@ -255,6 +256,7 @@ commit_repo() {
     local reponame="$1"
     local default_branch=production
     [[ $# -ge 2 ]] && default_branch="$2"
+    [[ -z "$GIT_URL_BASE" ]] && return
     local repopath="$OUTPUT_PATH/$reponame"
     local tmprepopath="$OUTPUT_PATH/tmp/$reponame"
     local remote_url="$GIT_URL_BASE/$reponame".git
