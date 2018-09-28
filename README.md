@@ -11,6 +11,7 @@ The vagrant VM's are all based on CentOS 7.5.
 ### Review configuration
 1. _(optional)_ Review configuration
    1. Relevant configuration files
+      1. `puppet_install` (especially PUPPET_REPO_URL)
       1. `vagrant_conf.yaml`
       1. `gitlab/data/common.yaml`
       1. `r10k/r10k/populate_from_legacy.sh`

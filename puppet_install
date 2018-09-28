@@ -14,7 +14,7 @@ done
 # Global settings
 PUPPET=/opt/puppetlabs/bin/puppet
 PUPPETSRVR=/opt/puppetlabs/bin/puppetserver
-PUPPET_REPO_URL=https://yum.puppetlabs.com/puppetlabs-release-pc1-el-7.noarch.rpm
+PUPPET_REPO_URL=https://yum.puppet.com/puppet6/puppet6-release-el-7.noarch.rpm
 HOSTNAME=$(hostname)
 REQUIRED_PKGS_COMMON=( bind-utils lsof )
 REQUIRED_PKGS_MASTER=( PyYAML )
