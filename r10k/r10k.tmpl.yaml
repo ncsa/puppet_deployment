@@ -1,0 +1,31 @@
+---
+deploy:
+    purge_levels:
+        - deployment
+#        - environment
+        - puppetfile
+    purge_whitelist:
+        - aloftus
+        - rundall
+git:
+    provider: rugged
+    username: git
+    private_key: ___SSH_PRIVATE_KEY___
+postrun: 
+    - /etc/puppetlabs/local/scripts/r10k_postrun.sh
+sources:
+    control:
+        remote: git@192.168.2.22:lsst-puppet/control.git
+        basedir: ___CODEDIR___/environments
+        ignore_branch_prefixes:
+            - topic
+    hiera:
+        remote: git@192.168.2.22:lsst-puppet/hiera.git
+        basedir: ___CODEDIR___/data
+        ignore_branch_prefixes:
+            - topic
+    legacy:
+        remote: git@192.168.2.22:lsst-puppet/legacy.git
+        basedir: ___CODEDIR___/legacy
+        ignore_branch_prefixes:
+            - topic

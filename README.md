@@ -12,11 +12,11 @@ The vagrant VM's are all based on CentOS 7.5.
 1. _(optional)_ Review configuration
    1. Relevant configuration files
       1. `puppet_install` (especially PUPPET_REPO_URL)
-      1. `vagrant_conf.yaml`
+      1. `vagrant_conf.yaml` (if using Vagrant)
       1. `gitlab/data/common.yaml`
-      1. `r10k/r10k/populate_from_legacy.sh`
-      1. `r10k/manifest.pp`
-      1. `scripts/disable_non_vm_friendly_profiles.sh`
+      1. `r10k/r10k/populate_from_legacy.sh` (only if migrating from legacy config)
+      1. `r10k/r10k.tmpl.yaml`
+      1. `scripts/disable_non_vm_friendly_profiles.sh` (for testing from Vagrant)
 1. _(optional)_ Create a common `.ssh` setup (enables automated git access from the puppet master)
    1. `mkdir .ssh`
    1. `ssh-keygen -t ecdsa -b 521 -f .ssh/id_ecdsa`
@@ -68,7 +68,7 @@ For both gitlab and puppet master nodes
 ### Puppet master
 1. _(**Common** steps from above)_
 1. `/root/puppet_deployment/puppet_install -m -M new -d`
-1. Edit `/root/puppet_deployment/r10k/manifest.pp`
+1. Edit `/root/puppet_deployment/r10k/r10k.tmpl.yaml`
 1. `/root/puppet_deployment/r10k/install.sh`
 1. `git clone git@git.ncsa.illinois.edu:lsst/puppet/local.git /etc/puppetlabs/local`
 1. `/etc/puppetlabs/local/scripts/configure_enc.sh`

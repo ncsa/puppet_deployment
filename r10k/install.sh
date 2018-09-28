@@ -1,10 +1,11 @@
 #!/bin/bash
 
-MODULE_NAME=r10k
-MODULE_VERSION=6.6.1
 BASE=/root/puppet_deployment
 MANIFEST=$BASE/$MODULE_NAME/manifest.pp
-PUPPET=/opt/puppetlabs/bin/puppet
+BIN=/opt/puppetlabs/puppet/bin
+PUPPET=${BIN}/puppet
+GEM=${BIN}/gem
+SSH_PRIVATE_KEY=/etc/puppetlabs/r10k/ssh/id_ecdsa
 COMMON=$BASE/common_funcs.sh
 
 [[ -f "$COMMON" ]] || {
@@ -15,38 +16,59 @@ source "$COMMON"
 
 
 prerun() {
-    # Remove unused (default) global hiera.yaml 
+    log "Remove unused (default) global hiera.yaml"
     rm -f /etc/puppetlabs/puppet/hiera.yaml
 }
 
 
-puppet_module_install() {
-    # Install puppet module
-    $PUPPET module install puppet-$MODULE_NAME --version $MODULE_VERSION
+install() {
+    log "Install r10k"
+    $GEM install r10k
+    log "Make symlinks"
+    ln -s $BIN/r10k /opt/puppetlabs/bin
+    log "Install dependencies for rugged"
+    yum -y group install 'Development Tools'
+    yum -y install cmake libssh2-devel openssl-devel python-pthreading
+    log "Install rugged"
+    $GEM install rugged
 }
 
 
-puppet_module_apply() {
-    # Perform service install
-    $PUPPET apply --test $MANIFEST
+configure() {
+    confdir=/etc/puppetlabs/r10k
+    srcfn=$BASE/r10k/r10k.tmpl.yaml
+    tgtfn=$confdir/r10k.yaml
+    log "Create r10k config: '$tgtfn'"
+    mkdir -p $confdir
+    codedir=$( $PUPPET config print codedir )
+    sed -e "s?___CODEDIR___?$codedir?" \
+        -e "s?___SSH_PRIVATE_KEY___?$SSH_PRIVATE_KEY?" \
+        $srcfn >$tgtfn
+}
 
+
+mk_ssh_key() {
+    [[ -f $SSH_PRIVATE_KEY ]] && return
+    log "Make gitlab deployment key"
+    mkdir -p $( dirname $SSH_PRIVATE_KEY )
+    ssh-keygen -t ecdsa -b 521 -f $SSH_PRIVATE_KEY -N ""
+    echo "New Deploy Public Key ..."
+    cat ${SSH_PRIVATE_KEY}.pub
 }
 
 
 postrun() {
-    # Clean up install junk from global modules dir
-    local paths=( $( puppet config print modulepath | tr ':' ' ' ) )
-    for dir in "${paths[@]}"; do
-        find $dir -mindepth 1 -delete
-    done
+    : #pass
 }
 
 set -x
 
 prerun
 
-puppet_module_install
+install
 
-puppet_module_apply
+configure
+
+mk_ssh_key
 
 postrun
