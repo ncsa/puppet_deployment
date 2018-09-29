@@ -13,7 +13,7 @@ done
 
 # Global settings
 PUPPET=/opt/puppetlabs/bin/puppet
-PUPPETSRVR=/opt/puppetlabs/bin/puppetserver
+PUPPETSERVER=/opt/puppetlabs/bin/puppetserver
 PUPPET_REPO_URL=https://yum.puppet.com/puppet6/puppet6-release-el-7.noarch.rpm
 HOSTNAME=$(hostname)
 REQUIRED_PKGS_COMMON=( bind-utils lsof )
@@ -200,25 +200,25 @@ ENDHERE
 
 
 configure_ca() {
+    # CA setup, see: https://puppet.com/docs/puppet/6.0/ssl_regenerate_certificates.html
     log "enter..."
     [[ "$DEBUG" -gt 0 ]] && set -x
-    [[ -d /etc/puppetlabs/puppet/ssl/ca ]] && {
+    [[ -f /etc/puppetlabs/puppet/ssl/certs/ca.pem ]] && {
         log 'CA already configured, skipping.'
         return 0
     }
 
-    local ip_addrs=( $(hostname -I) )
-    local all_alts=( "${ip_addrs[@]}" "$DNS_ALT_NAMES" )
-    local alt_names=$( IFS=','; cat <<< "${all_alts[*]}" )
-    $PUPPET cert list -a
-    $PUPPET config set certname $HOSTNAME --section master
-    $PUPPET certificate generate \
-        --dns-alt-names $alt_names \
-        --ca-location local \
-        $HOSTNAME
-    $PUPPET cert sign $HOSTNAME --allow-dns-alt-names
-    # don't know what this does, but puppetserver won't start otherwise
-    $PUPPET certificate find $HOSTNAME --ca-location local &>/dev/null
+    local ip_alts=( $( for i in $(hostname -I); do echo "IP:$i"; done ) )
+    local alt_names=$( echo "${ip_alts[@]} $DNS_ALT_NAMES" \
+        | sed -e 's/^[ \t]*//;s/[ \t]*$//' \
+        | sed -e 's/ /,/g'
+        )
+    $PUPPETSERVER ca setup --subject-alt-names $alt_names
+    $PUPPETSERVER start
+    sleep 5
+    $PUPPETSERVER ca list -a
+    $PUPPETSERVER stop
+    sleep 5
 }
 
 
@@ -234,12 +234,12 @@ puppetserver() {
     case $action in
         *start|reload) 
                 #$pupsrvc ensure=running
-                $PUPPETSRVR $action
+                $PUPPETSERVER $action
                 is_puppetserver_running || die 'puppetserver not running'
                 ;;
         stop)
                 #$pupsrvc ensure=stopped
-                $PUPPETSRVR $action
+                $PUPPETSERVER $action
                 is_puppetserver_running && die 'puppetserver still running'
                 ;;
         *)
@@ -301,7 +301,7 @@ case "$BUILD_TYPE" in
                 restore_ca
                 ;;
             new)
-                configure_ca
+                #configure_ca
                 create_autosign
                 ;;
             r10k)
