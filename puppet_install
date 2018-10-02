@@ -130,7 +130,7 @@ install_required_pkgs() {
 install_puppet() {
     log "enter..."
     [[ "$DEBUG" -gt 0 ]] && set -x
-    ls /etc/yum.repos.d/puppetlabs*.repo &>/dev/null \
+    ls /etc/yum.repos.d/puppet*.repo &>/dev/null \
     || yum -y install $PUPPET_REPO_URL
 
     local pkglist
