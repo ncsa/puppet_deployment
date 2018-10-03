@@ -1,4 +1,5 @@
 ---
+cachedir: /var/cache/r10k
 deploy:
     purge_levels:
         - deployment
@@ -7,10 +8,6 @@ deploy:
     purge_whitelist:
         - aloftus
         - rundall
-git:
-    provider: rugged
-    username: git
-    private_key: ___SSH_PRIVATE_KEY___
 postrun: 
     - /etc/puppetlabs/local/scripts/r10k_postrun.sh
 sources:

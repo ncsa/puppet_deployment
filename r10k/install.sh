@@ -26,11 +26,11 @@ install() {
     $GEM install r10k
     log "Make symlinks"
     ln -s $BIN/r10k /opt/puppetlabs/bin
-    log "Install dependencies for rugged"
-    yum -y group install 'Development Tools'
-    yum -y install cmake libssh2-devel openssl-devel python-pthreading
-    log "Install rugged"
-    $GEM install rugged
+#    log "Install dependencies for rugged"
+#    yum -y group install 'Development Tools'
+#    yum -y install cmake libssh2-devel openssl-devel python-pthreading
+#    log "Install rugged"
+#    $GEM install rugged
 }
 
 
@@ -58,10 +58,22 @@ mk_ssh_key() {
 
 
 postrun() {
-    : #pass
+    echo "On your git server, add public key '${SSH_PRIVATE_KEY}.pub' as a deploy key for all repos listed in 'r10k.yaml'"
+    echo
+    echo "Ensure '/root/.ssh/config' is setup to use the SSH private key for access to git..."
+    echo "..."
+    cat <<ENDHERE
+Host 10.142.181.4
+    User git
+    PreferredAuthentications publickey
+    IdentityFile ${SSH_PRIVATE_KEY}
+    ForwardX11 no
+ENDHERE
+	echo "..."
+	echo
 }
 
-set -x
+#set -x
 
 prerun
 
