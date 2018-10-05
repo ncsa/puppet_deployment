@@ -42,6 +42,7 @@ guests:
         env:
             PUPBUILDTYPE: master
             PUPCONFIGTYPE: restore
+            PUPINSTALLVER: 5
     new:
         hostname: adm01.ncsa.illinois.edu
         ip: 192.168.2.4

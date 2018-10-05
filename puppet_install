@@ -157,12 +157,28 @@ install_required_pkgs() {
 install_puppet() {
     log "enter..."
     [[ "$DEBUG" -gt 0 ]] && set -x
-    YUM_REPO_URL=https://yum.puppet.com/puppet${PUP_VERSION}/puppet${PUP_VERSION}-release-${OS_NAME}-${OS_VER}.noarch.rpm
+    #Install yum repo
+    local YUM_REPO_URL=https://yum.puppet.com
+    case "$PUP_VERSION" in
+        4)
+            local rpm_fn=puppetlabs-release-pc1-${OS_NAME}-${OS_VER}.noarch.rpm
+            YUM_REPO_URL=${YUM_REPO_URL}/$rpm_fn
+            ;;
+        5|6)
+            local rpm_fn=puppet${PUP_VERSION}-release-${OS_NAME}-${OS_VER}.noarch.rpm
+            local path=puppet${PUP_VERSION}
+            YUM_REPO_URL=$YUM_REPO_URL/$path/$rpm_fn
+            ;;
+        *)
+            die "Unknown puppet version: '$PUP_VERSION'"
+            ;;
+    esac
     ls /etc/yum.repos.d/puppet*.repo &>/dev/null \
     || yum -y install $YUM_REPO_URL
     ls /etc/yum.repos.d/puppet*.repo &>/dev/null \
     || die "Failed to install Yum repo file"
 
+    #Install packages
     local pkglist
     case "$BUILD_TYPE" in
         master)

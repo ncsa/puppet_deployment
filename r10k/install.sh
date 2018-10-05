@@ -26,8 +26,9 @@ install() {
     $GEM install r10k
     log "Make symlinks"
     ln -s $BIN/r10k /opt/puppetlabs/bin
-#    log "Install dependencies for rugged"
+#    log "Install development tools"
 #    yum -y group install 'Development Tools'
+#    log "Install dependencies for rugged"
 #    yum -y install cmake libssh2-devel openssl-devel python-pthreading
 #    log "Install rugged"
 #    $GEM install rugged
