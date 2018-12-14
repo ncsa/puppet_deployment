@@ -56,9 +56,9 @@ The vagrant VM's are all based on CentOS 7.5.
 # Deploy for production (on a physical host or other VM)
 ### Common
 For both gitlab and puppet master nodes
-1. `yum -y install git; yum -y upgrade && reboot`
+1. `curl https://raw.githubusercontent.com/ncsa/puppet_deployment/master/scripts/centos75_post.sh | bash`
 1. `cd /root; git clone https://github.com/ncsa/puppet_deployment.git`
-1. `/root/puppet_deployment/scripts/centos75_post.sh`
+
 ### Gitlab
 1. _(**Common** steps from above)_
 1. `/root/puppet_deployment/puppet_install -a -d`
