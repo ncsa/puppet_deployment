@@ -6,6 +6,7 @@ The vagrant definitions and scripts are useful to provide a test of the scripts 
 The vagrant VM's are all based on CentOS 7.5.
 
 ### Install
+1. `curl https://raw.githubusercontent.com/ncsa/puppet_deployment/master/scripts/centos75_post.sh | bash`
 1. `git clone https://github.com/ncsa/puppet_deployment.git`
 1. `cd puppet_deployment`
 ### Review configuration
