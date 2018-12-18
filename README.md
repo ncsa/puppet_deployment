@@ -70,8 +70,11 @@ For both gitlab and puppet master nodes
 1. _(**Common** steps from above)_
 1. `/root/puppet_deployment/puppet_install -m -M new -d`
 1. `git clone https://git.ncsa.illinois.edu/lsst/puppet/local.git /etc/puppetlabs/local`
-1. Edit `/etc/puppetlabs/local/enc/puppet_enc_sqlite_source.csv`
-1. `/etc/puppetlabs/local/scripts/configure_enc.sh`
+1. Configure ENC
+   1. Edit `/etc/puppetlabs/local/enc/puppet_enc_sqlite_source.csv`
+   1. `(cd /etc/puppetlabs/local/enc/; ./import_csv)`
+   1. `/etc/puppetlabs/local/scripts/lsdb.sh`
+   1. `/etc/puppetlabs/local/scripts/configure_enc.sh`
 1. Edit `/root/puppet_deployment/r10k/r10k.tmpl.yaml`
 1. `/root/puppet_deployment/r10k/install.sh`
 1. `r10k deploy environment -p -v debug`
