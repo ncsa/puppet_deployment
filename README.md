@@ -68,7 +68,7 @@ For both gitlab and puppet master nodes
 1. _TODO: restore from backup_
 ### Puppet master
 1. _(**Common** steps from above)_
-1. `/root/puppet_deployment/puppet_install -m -M new -d`
+1. `/root/puppet_deployment/puppet_install -m -M new -V 5 -d -D pup-npcf.lsst.ncsa.edu`
 1. `git clone https://git.ncsa.illinois.edu/lsst/puppet/local.git /etc/puppetlabs/local`
 1. Configure ENC
    1. Edit `/etc/puppetlabs/local/enc/puppet_enc_sqlite_source.csv`
