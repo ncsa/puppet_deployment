@@ -5,24 +5,24 @@ deploy:
         - deployment
 #        - environment
         - puppetfile
-    purge_whitelist:
-        - aloftus
-        - rundall
+#    purge_whitelist:
+#        - aloftus
+#        - rundall
 postrun: 
     - /etc/puppetlabs/local/scripts/r10k_postrun.sh
 sources:
     control:
-        remote: git@192.168.2.22:lsst-puppet/control.git
+        remote: git@192.168.2.22:lsst-puppet/control
         basedir: ___CODEDIR___/environments
         ignore_branch_prefixes:
             - topic
     hiera:
-        remote: git@192.168.2.22:lsst-puppet/hiera.git
+        remote: git@192.168.2.22:lsst-puppet/hiera
         basedir: ___CODEDIR___/data
         ignore_branch_prefixes:
             - topic
     legacy:
-        remote: git@192.168.2.22:lsst-puppet/legacy.git
+        remote: git@192.168.2.22:lsst-puppet/legacy
         basedir: ___CODEDIR___/legacy
         ignore_branch_prefixes:
             - topic

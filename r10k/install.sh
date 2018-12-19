@@ -5,7 +5,7 @@ MANIFEST=$BASE/$MODULE_NAME/manifest.pp
 BIN=/opt/puppetlabs/puppet/bin
 PUPPET=${BIN}/puppet
 GEM=${BIN}/gem
-SSH_PRIVATE_KEY=/etc/puppetlabs/r10k/ssh/id_ecdsa
+SSH_PRIVATE_KEY=/etc/puppetlabs/r10k/ssh/id_ed25519
 COMMON=$BASE/common_funcs.sh
 
 [[ -f "$COMMON" ]] || {
@@ -15,6 +15,58 @@ COMMON=$BASE/common_funcs.sh
 source "$COMMON"
 
 
+# Command line option defaults
+DEBUG=0
+GIT_HOST=
+MK_SSH_KEY=0
+VERBOSE=0
+
+###
+# Process Command Line
+###
+while :; do
+    case "$1" in
+        -d) VERBOSE=1
+            DEBUG=1
+            ;;
+        -h|-\?|--help)
+            echo "Usage: ${0##*/} [OPTIONS]"
+            echo "Options:"
+            echo "    -d                  (enable debug mode)"
+            echo "    -g <Git_Host>       (git server host) [Default: None]"
+            echo "    -k                  (mk new ssh private key) [Default: No]"
+            echo "    -K <SSH_key_path>   (git server host)"
+            echo "                        [Default: ${SSH_PRIVATE_KEY}]"
+            echo "    -v                  (enable verbose mode)"
+            exit
+            ;;
+        -g) GIT_HOST="$2"
+            shift
+            ;;
+        -k) MK_SSH_KEY=1
+            ;;
+        -K) SSH_PRIVATE_KEY="$2"
+            shift
+            ;;
+        -v) VERBOSE=1
+            ;;
+        --) shift
+            break
+            ;;
+        -?*)
+            die "Invalid option: $1"
+            ;;
+        *)  break
+            ;;
+    esac
+    shift
+done
+
+# Check that cmdline options make sense
+if [[ "${#GIT_HOST}" -lt 1 ]] ; then
+    die "GIT_HOST cannot be empty"
+fi
+
 prerun() {
     log "Remove unused (default) global hiera.yaml"
     rm -f /etc/puppetlabs/puppet/hiera.yaml
@@ -22,6 +74,7 @@ prerun() {
 
 
 install() {
+    [[ -f $BIN/r10k ]] && return
     log "Install r10k"
     $GEM install r10k
     log "Make symlinks"
@@ -43,28 +96,28 @@ configure() {
     mkdir -p $confdir
     codedir=$( $PUPPET config print codedir )
     sed -e "s?___CODEDIR___?$codedir?" \
-        -e "s?___SSH_PRIVATE_KEY___?$SSH_PRIVATE_KEY?" \
+        -e "s?___GIT_HOST___?$GIT_HOST?" \
         $srcfn >$tgtfn
 }
 
 
 mk_ssh_key() {
+    [[ ${MK_SSH_KEY} -lt 1 ]] && return
     [[ -f $SSH_PRIVATE_KEY ]] && return
     log "Make gitlab deployment key"
-    mkdir -p $( dirname $SSH_PRIVATE_KEY )
-    ssh-keygen -t ecdsa -b 521 -f $SSH_PRIVATE_KEY -N ""
+    mkdir -p $( dirname "$SSH_PRIVATE_KEY" )
+    ssh-keygen -t ed25519 -f "$SSH_PRIVATE_KEY" -N "" -C "r10k@$(hostname -f)"
+    chmod 0400 "$SSH_PRIVATE_KEY" "${SSH_PRIVATE_KEY}.pub"
+
+    echo "On your git server, add public key (below) as a deploy key for all repos listed in 'r10k.yaml'"
     echo "New Deploy Public Key ..."
-    cat ${SSH_PRIVATE_KEY}.pub
-}
-
-
-postrun() {
-    echo "On your git server, add public key '${SSH_PRIVATE_KEY}.pub' as a deploy key for all repos listed in 'r10k.yaml'"
+    cat "${SSH_PRIVATE_KEY}.pub"
+    echo
     echo
     echo "Ensure '/root/.ssh/config' is setup to use the SSH private key for access to git..."
     echo "..."
     cat <<ENDHERE
-Host 10.142.181.4
+Host ${GIT_HOST}
     User git
     PreferredAuthentications publickey
     IdentityFile ${SSH_PRIVATE_KEY}
@@ -72,6 +125,11 @@ Host 10.142.181.4
 ENDHERE
 	echo "..."
 	echo
+}
+
+
+postrun() {
+    : #pass
 }
 
 #set -x

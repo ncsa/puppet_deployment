@@ -12,6 +12,7 @@ for f in "${INCLUDES[@]}"; do
 done
 
 PUPPET=/opt/puppetlabs/bin/puppet
+JQ=/usr/bin/jq
 
 ###
 # Process cmdline
@@ -101,14 +102,14 @@ done
 
 check_or_install_jq() {
     log "enter..."
-    which jq &>/dev/null \
+    which $JQ &>/dev/null \
     || continue_or_exit "required program 'jq' not found; shall I install it?"
     local url='https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64'
-    local tgt='/usr/local/bin/jq'
-    curl -sfL -o "$tgt" "$url"
+    curl -sfL -o "$JQ" "$url"
     local rc=$?
     [[ $rc -ne 0 ]] && die "curl returned non-zero '$rc'"
-    chmod +x "$tgt"
+    [[ -f "$JQ" ]] || die 'Failed installing jq'
+    chmod +x "$JQ"
 }
 
 public_module_names_versions() {
@@ -128,7 +129,7 @@ do_jq() {
     [[ -d "$MODULES_PATH" ]] || die "cant find module dir '$MODULES_PATH'"
     find $MODULES_PATH -name metadata.json \
     | grep -v gpfs \
-    | xargs -r -n1 jq -r "$1"
+    | xargs -r -n1 $JQ -r "$1"
 }
 
 
@@ -342,7 +343,7 @@ cp_legacy_modules() {
             cpdir "$dirpath" "$legacyrepo"
         else
             # if name from metadata.json is IN Puppetfile, skip
-            external_name=$( jq -r '.name' "$metafn" )
+            external_name=$( $JQ -r '.name' "$metafn" )
             grep -F "$external_name" "$pupfn" 1>/dev/null
             rc=$?
             case $rc in

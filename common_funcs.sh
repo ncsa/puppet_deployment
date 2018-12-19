@@ -18,6 +18,12 @@ log() {
 }
 
 
+debug() {
+    [[ $DEBUG -ne 1 ]] && return
+    echo "DEBUG (${BASH_SOURCE[1]} [${BASH_LINENO[0]}] ${FUNCNAME[1]}) $*" 1>&2
+}
+
+
 dumpvars() {
     [[ $VERBOSE -eq 1 ]] || return 0
     for a in $*; do
