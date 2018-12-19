@@ -12,17 +12,17 @@ postrun:
     - /etc/puppetlabs/local/scripts/r10k_postrun.sh
 sources:
     control:
-        remote: git@192.168.2.22:lsst-puppet/control
+        remote: git@___GIT_HOST___:lsst-puppet/control
         basedir: ___CODEDIR___/environments
         ignore_branch_prefixes:
             - topic
     hiera:
-        remote: git@192.168.2.22:lsst-puppet/hiera
+        remote: git@___GIT_HOST___:lsst-puppet/hiera
         basedir: ___CODEDIR___/data
         ignore_branch_prefixes:
             - topic
     legacy:
-        remote: git@192.168.2.22:lsst-puppet/legacy
+        remote: git@___GIT_HOST___:lsst-puppet/legacy
         basedir: ___CODEDIR___/legacy
         ignore_branch_prefixes:
             - topic
