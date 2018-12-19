@@ -129,7 +129,9 @@ ENDHERE
 
 
 postrun() {
-    : #pass
+    known_hosts=$HOME/.ssh/known_hosts
+    grep -qv "$GIT_HOST" $known_hosts \
+    || ssh-keyscan -4 "$GIT_HOST" >> $known_hosts
 }
 
 #set -x
