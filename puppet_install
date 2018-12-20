@@ -309,8 +309,8 @@ create_autosign() {
     [[ "$DEBUG" -gt 0 ]] && set -x
     local fn=$( $PUPPET config print autosign )
     [[ -f $fn ]] && return 0
-    parts=( ${AUTOSIGN_NAMES//,/ } )
-    >$fn for l in "${parts[@]}"; do echo "$l"; done
+    local parts=( ${AUTOSIGN_NAMES//,/ } )
+    for l in "${parts[@]}"; do echo "$l"; done >$fn
 }
 
 
