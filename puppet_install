@@ -377,7 +377,7 @@ case "$BUILD_TYPE" in
                 restore_ca
                 ;;
             new)
-                configure_ca
+#                configure_ca
 #                create_autosign
                 ;;
         esac
