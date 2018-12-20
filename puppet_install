@@ -31,7 +31,8 @@ CONFIG_TYPE="$PUPCONFIGTYPE"         #new | restore | r10k (allow env var)
 AGENT_CERTNAME="$PUPCERTNAME"        #allow override hostname
 AGENT_PUPMASTER="$PUPMASTER"         #ip or valid DNS hostname of pupmaster
 DNS_ALT_NAMES="$PUPCAALTNAMES"       #dns alt names for puppet certificate
-PUP_VERSION="$PUPINSTALLVER"      #version of puppet to install (5 or 6)
+PUP_VERSION="$PUPINSTALLVER"         #version of puppet to install (5 or 6)
+AUTOSIGN_NAMES="$PUPAUTOSIGN"         #set autosign strings
 
 
 ###
@@ -51,6 +52,7 @@ while :; do
             echo "    -m                    (build a master)"
             echo "    -M <new|restore|r10k> (how to configure puppet master)"
             echo "    -P <Puppet Master IP> (IP or hostname of puppet master, used only for agent build type)"
+            echo "    -u <autosign_names>   (comma separated list of autosign names)"
             echo "    -v                    (enable verbose mode)"
             echo "    -V <puppet version>   Version of puppet to install (ie: 5 or 6)"
             exit
@@ -77,6 +79,9 @@ while :; do
             shift
             ;;
         -P) AGENT_PUPMASTER="$2"
+            shift
+            ;;
+        -u) AUTOSIGN_NAMES="$2"
             shift
             ;;
         -v) VERBOSE=1
@@ -249,50 +254,20 @@ configure_ca() {
     # For puppet6, see: https://puppet.com/docs/puppet/6.0/ssl_regenerate_certificates.html
     log "enter..."
     [[ "$DEBUG" -gt 0 ]] && set -x
-    local hn_short=$( hostname )
-    local hn_long=$( hostname -f )
-
-    # Stop if already setup
-    ##puppet6
-    [[ -f /etc/puppetlabs/puppet/ssl/certs/ca.pem ]] && {
-#    ##puppet4
-#    [[ -d /etc/puppetlabs/puppet/ssl/ca ]] && {
-        log 'CA already configured, skipping.'
-        return 0
-    }
 
     # Setup Alt Names
-    ##puppet6
-    local ip_alts=( $( for i in $(hostname -I); do echo "IP:$i"; done ) )
-#    ##puppet4
-#    local ip_alts=( $(hostname -I) )
-#
-    local alt_names=$( echo "${ip_alts[@]} DNS:$hn_short $DNS_ALT_NAMES" \
+    local ip_alts alt_names
+    if [[ $PUP_VERSION == 6 ]] ; then
+        ip_alts=( $( for i in $(hostname -I); do echo "IP:$i"; done ) )
+    else
+        ip_alts=( $(hostname -I) )
+    fi
+    alt_names=$( echo "${ip_alts[@]} $DNS_ALT_NAMES" \
         | sed -e 's/^[ \t]*//;s/[ \t]*$//' \
         | sed -e 's/ /,/g'
         )
 
-    # Create CA cert
-    ##puppet6
-    $PUPPETSERVER ca setup \
-        --subject-alt-names $alt_names \
-        --ca-name $hn_long \
-        --certname $hn_long
-    #$PUPPETSERVER start
-    #sleep 5
-    #$PUPPETSERVER ca list -a
-    #$PUPPETSERVER stop
-    #sleep 5
-#    ##puppet4
-#    $PUPPET cert list -a
-#    $PUPPET config set certname $HOSTNAME --section master
-#    $PUPPET certificate generate \
-#        --dns-alt-names $alt_names \
-#        --ca-location local \
-#        $HOSTNAME
-#    #$PUPPET cert sign $HOSTNAME --allow-dns-alt-names
-#    # don't know what this does, but puppetserver won't start otherwise
-#    $PUPPET certificate find $HOSTNAME --ca-location local &>/dev/null
+    $PUPPET config set dns_alt_names "$alt_names"
 }
 
 
@@ -334,10 +309,8 @@ create_autosign() {
     [[ "$DEBUG" -gt 0 ]] && set -x
     local fn=$( $PUPPET config print autosign )
     [[ -f $fn ]] && return 0
-    cat > $fn <<ENDHERE
-*.ncsa.illinois.edu
-*.lsst.ncsa.edu
-ENDHERE
+    parts=( ${AUTOSIGN_NAMES//,/ } )
+    >$fn for l in "${parts[@]}"; do echo "$l"; done
 }
 
 
@@ -377,8 +350,8 @@ case "$BUILD_TYPE" in
                 restore_ca
                 ;;
             new)
-#                configure_ca
-#                create_autosign
+                configure_ca
+                create_autosign
                 ;;
         esac
         #puppetserver start
