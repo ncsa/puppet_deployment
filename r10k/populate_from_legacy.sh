@@ -171,26 +171,35 @@ add_git_submodules_to_puppetfile() {
     local fn_gitmodules="$( readlink -e $prodpath/.gitmodules )"
     local dn_git_submodules="$( readlink -e $prodpath/.git/modules )"
     [[ -f "$fn_gitmodules" ]] || return
-	git config -lf "$fn_gitmodules" \
-	| awk -F '.'  -v "dn_git_submodules=$dn_git_submodules" "
-	function get_commit( name ) {
-		fn_head = dn_git_submodules \"/\" name \"/HEAD\"
-		cmd = \"cat \" fn_head
-		cmd | getline commit
-		return commit
-	}
-	\$3~/path=/ { n=split(\$NF,parts,/=/)
-				  path=parts[n]
-				  n=split(path,parts,/\\//)
-				  name=parts[n]
-				  commit = get_commit( path )
-				  next
-				}
-	\$3~/url=/  { n=split(\$0,parts,/=/)
-				  url=parts[n]
-				  format = \"mod '%s',\\n    :git => '%s',\\n    :commit => '%s'\\n\"
-				  printf(format, name, url, commit)
-				}
+    git config -lf "$fn_gitmodules" \
+    | awk -F '.'  -v "dn_git_submodules=$dn_git_submodules" "
+    function get_commit( path ) {
+        fn_head = dn_git_submodules \"/\" path \"/HEAD\"
+        cmd = \"cat \" fn_head
+        cmd | getline commit
+        if ( commit ~ /^ref:/ ) {
+            split( commit, parts, / / )
+            ref = parts[2]
+            fn_head = dn_git_submodules \"/\" path \"/\" ref
+            cmd = \"cat \" fn_head
+            cmd | getline commit
+        }
+        return commit
+    }
+    \$3~/path=/ {
+        n=split(\$NF,parts,/=/)
+        path=parts[n]
+        n=split(path,parts,/\\//)
+        name=parts[n]
+        commit = get_commit( path )
+        next
+    }
+    \$3~/url=/ {
+        n=split(\$0,parts,/=/)
+        url=parts[n]
+        format = \"mod '%s',\\n    :git => '%s',\\n    :commit => '%s'\\n\"
+        printf(format, name, url, commit)
+    }
 " >> "$pupfn"
 }
 
