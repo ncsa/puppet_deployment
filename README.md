@@ -78,6 +78,8 @@ For both gitlab and puppet master nodes
 1. Edit `/root/puppet_deployment/r10k/r10k.tmpl.yaml`
 1. `/root/puppet_deployment/r10k/install.sh`
 1. `r10k deploy environment -p -v debug`
+1. Start puppetserver
+   1. `systemctl start puppetserver`
 
 
 # Sample - Migrate legacy deployment to r10k deployment
