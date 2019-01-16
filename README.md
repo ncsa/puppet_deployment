@@ -71,7 +71,7 @@ For both gitlab and puppet master nodes
 1. `/root/puppet_deployment/puppet_install -m -M new -V 5 -d -D pup-npcf.lsst.ncsa.edu`
 1. `git clone https://git.ncsa.illinois.edu/lsst/puppet/local.git /etc/puppetlabs/local`
 1. Configure ENC
-   1. Edit `/etc/puppetlabs/local/enc/puppet_enc_sqlite_source.csv`
+   1. Edit `/etc/puppetlabs/local/enc/source.csv`
    1. `(cd /etc/puppetlabs/local/enc/; ./import_csv)`
    1. `/etc/puppetlabs/local/scripts/lsdb.sh`
    1. `/etc/puppetlabs/local/scripts/configure_enc.sh`
