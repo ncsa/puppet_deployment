@@ -35,7 +35,7 @@ while :; do
             echo "    -d                  (enable debug mode)"
             echo "    -g <Git_Host>       (git server host) [Default: None]"
             echo "    -k                  (mk new ssh private key) [Default: No]"
-            echo "    -K <SSH_key_path>   (git server host)"
+            echo "    -K <SSH_key_path>   (directory for r10k ssh keys)"
             echo "                        [Default: ${SSH_PRIVATE_KEY}]"
             echo "    -v                  (enable verbose mode)"
             exit
