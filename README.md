@@ -41,8 +41,8 @@ The vagrant VM's are all based on CentOS 7.5.
 1. `vagrant ssh new`
    1. `sudo su -`
    1. `/root/puppet_deployment/scripts/disable_non_vm_friendly_profiles.sh`
-   1. `git clone git@git.ncsa.illinois.edu:lsst/puppet/local.git /etc/puppetlabs/local`
-   1. `/etc/puppetlabs/local/scripts/configure_enc.sh`
+   1. `git clone https://github.com/ncsa/puppet-local-config.git /etc/puppetlabs/local`
+   1. `/etc/puppetlabs/local/enc/configure_enc.sh`
    1. `/root/puppet_deployment/r10k/install.sh`
    1. `r10k deploy environment -p -v debug`
    1. `/opt/puppetlabs/bin/puppetserver start`
@@ -69,7 +69,7 @@ For both gitlab and puppet master nodes
 ### Puppet master
 1. _(**Common** steps from above)_
 1. `/root/puppet_deployment/puppet_install -m -M new -V 5 -d -D pup-npcf.lsst.ncsa.edu`
-1. `git clone https://git.ncsa.illinois.edu/lsst/puppet/local.git /etc/puppetlabs/local`
+1. `git clone https://github.com/ncsa/puppet-local-config.git /etc/puppetlabs/local`
 1. Configure ENC
    1. Edit `/etc/puppetlabs/local/enc/source.csv`
    1. `(cd /etc/puppetlabs/local/enc/; ./import_csv)`
