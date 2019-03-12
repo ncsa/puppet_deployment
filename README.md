@@ -69,7 +69,7 @@ For both gitlab and puppet master nodes
 ### Puppet master
 1. _(**Common** steps from above)_
 1. `/root/puppet_deployment/puppet_install -m -M new -V 5 -d -D pup-npcf.lsst.ncsa.edu`
-1. `git clone https://github.com/ncsa/puppet-local-config.git /etc/puppetlabs/local`
+1. `git clone https://github.com/ncsa/puppetserver-local.git /etc/puppetlabs/local`
 1. Configure ENC
    1. Edit `/etc/puppetlabs/local/enc/source.csv`
    1. `(cd /etc/puppetlabs/local/enc/; ./import_csv)`
