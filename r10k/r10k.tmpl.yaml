@@ -2,27 +2,22 @@
 cachedir: /var/cache/r10k
 deploy:
     purge_levels:
-        - deployment
-#        - environment
-        - puppetfile
-#    purge_whitelist:
-#        - aloftus
-#        - rundall
+        - environment
+    purge_whitelist:
+        - data
+        - legacy
 postrun: 
-    - /etc/puppetlabs/local/scripts/r10k_postrun.sh
+    - /etc/puppetlabs/local/r10k/postrun.sh
 sources:
     control:
         remote: git@___GIT_HOST___:lsst-puppet/control
         basedir: ___CODEDIR___/environments
-        ignore_branch_prefixes:
-            - topic
+        invalid_branches: correct
     hiera:
         remote: git@___GIT_HOST___:lsst-puppet/hiera
         basedir: ___CODEDIR___/data
-        ignore_branch_prefixes:
-            - topic
+        invalid_branches: correct
     legacy:
         remote: git@___GIT_HOST___:lsst-puppet/legacy
         basedir: ___CODEDIR___/legacy
-        ignore_branch_prefixes:
-            - topic
+        invalid_branches: correct
