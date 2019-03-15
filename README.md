@@ -2,7 +2,7 @@
 Define a process to (re-)build, from scratch, a configuration management environment consisting of a version controlled Data Store (gitlab) and OS Configuration Manager (puppet).
 
 
-# Deploy for production (on a physical host or other VM)
+# Installation
 ### Common
 For both gitlab and puppet master nodes
 1. `curl https://raw.githubusercontent.com/ncsa/puppet_deployment/master/scripts/centos75_post.sh | bash`
