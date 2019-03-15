@@ -21,14 +21,13 @@ For both gitlab and puppet master nodes
    1. where <DNS_ALT_NAMES> is comma separated list of alternate names
       (note: public fqdn and local ip-addrs are automatically detected and should
       not be included in DNS_ALT_NAMES)
-#### Configure ENC
-(This step is optional, but the custom setup (linked below) installs some r10k postrun
-scripts, so is needed before r10k.)
-1. See: https://github.com/ncsa/puppetserver-local
-#### Install and configure R10K
-1. Edit `/root/puppet_deployment/r10k/r10k.tmpl.yaml`
-1. `/root/puppet_deployment/r10k/install.sh`
-#### Deploy dynamic environments with r10k
-1. `r10k deploy environment -p -v debug`
-#### Start puppetserver
-1. `systemctl start puppetserver`
+1. #### Configure ENC
+   (This step is optional, but the custom setup (linked below) installs some r10k postrun  scripts, so is needed before r10k.)
+   1. See: https://github.com/ncsa/puppetserver-local
+1. #### Install and configure R10K
+   1. Edit `/root/puppet_deployment/r10k/r10k.tmpl.yaml`
+   1. `/root/puppet_deployment/r10k/install.sh`
+1. #### Deploy dynamic environments with r10k
+   1. `r10k deploy environment -p -v debug`
+1. #### Start puppetserver
+   1. `systemctl start puppetserver`
