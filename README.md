@@ -31,6 +31,6 @@ For both gitlab and puppet master nodes
 1. #### Install hostkey (created above) on git server as a deploy key
    1. See: https://docs.gitlab.com/ee/ssh/#deploy-keys
 1. #### Deploy dynamic environments with r10k
-   1. `r10k deploy environment -p -v debug`
+   1. `/opt/puppetlabs/puppet/bin/r10k deploy environment -p -v debug`
 1. #### Start puppetserver
    1. `systemctl start puppetserver`
