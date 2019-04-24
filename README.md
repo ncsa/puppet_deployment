@@ -26,7 +26,10 @@ For both gitlab and puppet master nodes
    1. See: https://github.com/ncsa/puppetserver-local
 1. #### Install and configure R10K
    1. Edit `/root/puppet_deployment/r10k/r10k.tmpl.yaml`
-   1. `/root/puppet_deployment/r10k/install.sh`
+   1. `/root/puppet_deployment/r10k/install.sh -h`
+   1. `/root/puppet_deployment/r10k/install.sh -g GITSERVER -k -v`
+1. #### Install hostkey (created above) on git server as a deploy key
+   1. See: https://docs.gitlab.com/ee/ssh/#deploy-keys
 1. #### Deploy dynamic environments with r10k
    1. `r10k deploy environment -p -v debug`
 1. #### Start puppetserver
