@@ -30,6 +30,8 @@ For both gitlab and puppet master nodes
    1. `/root/puppet_deployment/r10k/install.sh -k -v -g <GITSERVER>`
 1. #### Install hostkey (created above) on git server as a deploy key
    1. See: https://docs.gitlab.com/ee/ssh/#deploy-keys
+   1. Verify access
+      1. `awk '/git@/{print $NF}' /etc/puppetlabs/r10k/r10k.yaml | xargs -n1 -- git ls-remote -h`
 1. #### Deploy dynamic environments with r10k
    1. `/opt/puppetlabs/puppet/bin/r10k deploy environment -p -v debug 2>&1 | tee ~/r10k-deploy.log`
    1. `grep -i error ~/r10k-deploy.log`
