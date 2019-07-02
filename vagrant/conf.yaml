@@ -1,0 +1,53 @@
+---
+# Defaults will be over-written by per-guest values
+defaults:
+    box: bento/centos-7.6
+    memory: 512
+    env:
+        PUPBUILDTYPE: agent
+
+# Common data will be merged together with per-guest settings
+common:
+    env:
+        PUPBKUPDIR: /vagrant/backups
+    # commands are run in order specified here (top to bottom)
+#    shell_always:
+#      - cmd: chown -R root:root /vagrant/.ssh
+    # commands are run in order specified here (top to bottom)
+#    shell_once:
+#      - cmd: /vagrant/scripts/centos_post.sh
+#      - cmd: |
+#             git config --global user.email "vagrant"
+#             git config --global user.name "vagrant"
+#             git config --global push.default simple
+#             ln -s /vagrant/.ssh /root/.ssh
+#             ln -s /vagrant /root/puppet_deployment
+#      - cmd: /vagrant/puppet/install.sh
+
+# Define each VM
+# Hash key is the VM name (use that argument to vagrant ssh)
+# Use 'hostname' to set the hostname, or omit for vagrant to use the hash key
+guests:
+    git:
+        ip: 192.168.2.2
+        memory: 4096
+        cpus: 2
+        env:
+            PUPMASTER: 192.168.2.3
+        forwarded_ports:
+          - guest: 8765
+            host: 8765
+
+    pup:
+        hostname: puppet
+        ip: 192.168.2.3
+        memory: 3072
+        env:
+            PUPBUILDTYPE: master
+
+    a1:
+        hostname: agent01
+        ip: 192.168.2.100
+        env:
+            PUPBUILDTYPE: agent
+            PUPMASTER: 192.168.2.3

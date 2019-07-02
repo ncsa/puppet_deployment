@@ -3,11 +3,11 @@
 
 require 'yaml'
 #require 'pp'
-load 'vagrant_funcs.rb'
+load 'funcs.rb'
 
 # Get values from yaml config file
 # (See also: https://stackoverflow.com/a/26394449 )
-conf = YAML.load_file( "vagrant_conf.yaml" )
+conf = YAML.load_file( "conf.yaml" )
 defaults = conf['defaults']
 common = conf['common']
 guests = conf['guests']

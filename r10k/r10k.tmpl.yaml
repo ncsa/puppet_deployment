@@ -10,14 +10,14 @@ postrun:
     - /etc/puppetlabs/local/r10k/postrun.sh
 sources:
     control:
-        remote: git@___GIT_HOST___:lsst-puppet/control
+        remote: git@___GITSERVER___:lsst-puppet/control
         basedir: ___CODEDIR___/environments
         invalid_branches: correct
     hiera:
-        remote: git@___GIT_HOST___:lsst-puppet/hiera
+        remote: git@___GITSERVER___:lsst-puppet/hiera
         basedir: ___CODEDIR___/data
         invalid_branches: correct
     legacy:
-        remote: git@___GIT_HOST___:lsst-puppet/legacy
+        remote: git@___GITSERVER___:lsst-puppet/legacy
         basedir: ___CODEDIR___/legacy
         invalid_branches: correct

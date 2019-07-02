@@ -6,9 +6,3 @@
 1. `install.sh -d -k -g $GITSERVER`
 1. Edit `/root/.ssh/config`
 1. Add contents of `/etc/puppetlabs/r10k/ssh/id_ed25519.pub` to gitlab server as deploy key for each repo that access is needed
-
-### (ALTERNATE)
-#### Migrate from old server
-Create control-repo and hiera-repo from legacy (monolithic) directory structure
-1. `./01_populate_from_legacy.sh`
-   1. Give `-h` option for help message

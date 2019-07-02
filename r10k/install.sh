@@ -17,7 +17,6 @@ source "$COMMON"
 
 # Command line option defaults
 DEBUG=0
-GIT_HOST=
 MK_SSH_KEY=0
 VERBOSE=0
 
@@ -33,14 +32,14 @@ while :; do
             echo "Usage: ${0##*/} [OPTIONS]"
             echo "Options:"
             echo "    -d                  (enable debug mode)"
-            echo "    -g <Git_Host>       (git server host) [Default: None]"
+            echo "    -g <GITSERVER>      (git server host) [Default: None]"
             echo "    -k                  (mk new ssh private key) [Default: No]"
             echo "    -K <SSH_key_path>   (directory for r10k ssh keys)"
             echo "                        [Default: ${SSH_PRIVATE_KEY}]"
             echo "    -v                  (enable verbose mode)"
             exit
             ;;
-        -g) GIT_HOST="$2"
+        -g) GITSERVER="$2"
             shift
             ;;
         -k) MK_SSH_KEY=1
@@ -63,8 +62,8 @@ while :; do
 done
 
 # Check that cmdline options make sense
-if [[ "${#GIT_HOST}" -lt 1 ]] ; then
-    die "GIT_HOST cannot be empty"
+if [[ "${#GITSERVER}" -lt 1 ]] ; then
+    die "GITSERVER cannot be empty"
 fi
 
 prerun() {
@@ -96,7 +95,7 @@ configure() {
     mkdir -p $confdir
     codedir=$( $PUPPET config print codedir )
     sed -e "s?___CODEDIR___?$codedir?" \
-        -e "s?___GIT_HOST___?$GIT_HOST?" \
+        -e "s?___GITSERVER___?$GITSERVER?" \
         $srcfn >$tgtfn
 }
 
@@ -117,7 +116,7 @@ mk_ssh_key() {
     echo "Ensure '/root/.ssh/config' is setup to use the SSH private key for access to git..."
     echo "..."
     cat <<ENDHERE
-Host ${GIT_HOST}
+Host ${GITSERVER}
     User git
     PreferredAuthentications publickey
     IdentityFile ${SSH_PRIVATE_KEY}
@@ -130,8 +129,8 @@ ENDHERE
 
 postrun() {
     known_hosts=$HOME/.ssh/known_hosts
-    grep -qv "$GIT_HOST" $known_hosts \
-    || ssh-keyscan -4 "$GIT_HOST" >> $known_hosts
+    grep -qv "$GITSERVER" $known_hosts \
+    || ssh-keyscan -4 "$GITSERVER" >> $known_hosts
 }
 
 #set -x

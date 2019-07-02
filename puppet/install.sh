@@ -27,7 +27,7 @@ DEBUG=0
 FORCE="${PUPINSTALLFORCE:-0}"
 BKUP_DIR="${PUPBKUPDIR:-/backups}"
 BUILD_TYPE="$PUPBUILDTYPE"           #master | agent (allow to be set by env var)
-CONFIG_TYPE="$PUPCONFIGTYPE"         #new | restore | r10k (allow env var)
+#CONFIG_TYPE="$PUPCONFIGTYPE"         #new | restore | r10k (allow env var)
 AGENT_CERTNAME="$PUPCERTNAME"        #allow override hostname
 AGENT_PUPMASTER="$PUPMASTER"         #ip or valid DNS hostname of pupmaster
 DNS_ALT_NAMES="$PUPCAALTNAMES"       #dns alt names for puppet certificate
@@ -50,7 +50,7 @@ while :; do
             echo "    -D <dns_alt_names>    (Comma separated list of alternate names for puppet CA certificate)"
             echo "    -F                    (Force install. Install over the top of existing setup)"
             echo "    -m                    (build a master)"
-            echo "    -M <new|restore|r10k> (how to configure puppet master)"
+#            echo "    -M <new|restore|r10k> (how to configure puppet master)"
             echo "    -P <Puppet Master IP> (IP or hostname of puppet master, used only for agent build type)"
             echo "    -u <autosign_names>   (comma separated list of autosign names)"
             echo "    -v                    (enable verbose mode)"
@@ -75,9 +75,9 @@ while :; do
             ;;
         -m) BUILD_TYPE=master
             ;;
-        -M) CONFIG_TYPE="$2"
-            shift
-            ;;
+#        -M) CONFIG_TYPE="$2"
+#            shift
+#            ;;
         -P) AGENT_PUPMASTER="$2"
             shift
             ;;
@@ -110,12 +110,13 @@ done
 assert_valid_build_type() {
     case "$BUILD_TYPE" in
         master)
-            # check config_type ... only relevant if build_type is MASTER
-            if [[ " new restore r10k " =~ " $CONFIG_TYPE " ]]; then
-                : #pass
-            else
-                die "Missing or invalid config type: '$CONFIG_TYPE' for puppet master"
-            fi
+#            # check config_type ... only relevant if build_type is MASTER
+#            if [[ " new restore " =~ " $CONFIG_TYPE " ]]; then
+#                : #pass
+#            else
+#                die "Missing or invalid config type: '$CONFIG_TYPE' for puppet master"
+#            fi
+            : #pass
             ;;
         agent)
             [[ -n "$AGENT_PUPMASTER" ]] || die 'Missing Pup Master IP or hostname'
@@ -165,10 +166,6 @@ install_puppet() {
     #Install yum repo
     local YUM_REPO_URL=https://yum.puppet.com
     case "$PUP_VERSION" in
-        4)
-            local rpm_fn=puppetlabs-release-pc1-${OS_NAME}-${OS_VER}.noarch.rpm
-            YUM_REPO_URL=${YUM_REPO_URL}/$rpm_fn
-            ;;
         5|6)
             local rpm_fn=puppet${PUP_VERSION}-release-${OS_NAME}-${OS_VER}.noarch.rpm
             local path=puppet${PUP_VERSION}
@@ -202,52 +199,52 @@ get_bkup_src() {
 }
 
 
-restore_config() {
-    log "enter..."
-    [[ "$DEBUG" -gt 0 ]] && set -x
-    local fn=$( get_bkup_src )
-    [[ -z "$fn" ]] && die "Cant find a puppet backup"
-    tar zxPf "$fn" --overwrite -T - <<ENDHERE
-/etc/puppetlabs/puppet/*.conf
-/etc/puppetlabs/puppet/*.yaml
-/etc/puppetlabs/puppetserver/
-/etc/puppetlabs/code/config/
-ENDHERE
-}
+#restore_config() {
+#    log "enter..."
+#    [[ "$DEBUG" -gt 0 ]] && set -x
+#    local fn=$( get_bkup_src )
+#    [[ -z "$fn" ]] && die "Cant find a puppet backup"
+#    tar zxPf "$fn" --overwrite -T - <<ENDHERE
+#/etc/puppetlabs/puppet/*.conf
+#/etc/puppetlabs/puppet/*.yaml
+#/etc/puppetlabs/puppetserver/
+#/etc/puppetlabs/code/config/
+#ENDHERE
+#}
 
 
-disable_puppetdb() {
-    log "enter..."
-    [[ "$DEBUG" -gt 0 ]] && set -x
-    $PUPPET config set storeconfigs false --section master
-    $PUPPET config set reports store --section master
-    for f in puppetdb.conf routes.yaml; do
-        rm /etc/puppetlabs/puppet/"$f"
-    done
-}
+#disable_puppetdb() {
+#    log "enter..."
+#    [[ "$DEBUG" -gt 0 ]] && set -x
+#    $PUPPET config set storeconfigs false --section master
+#    $PUPPET config set reports store --section master
+#    for f in puppetdb.conf routes.yaml; do
+#        rm /etc/puppetlabs/puppet/"$f"
+#    done
+#}
 
 
-restore_environments() {
-    log "enter..."
-    [[ "$DEBUG" -gt 0 ]] && set -x
-    fn=$( get_bkup_src )
-    [[ -z "$fn" ]] && die "Cant find a puppet backup"
-    find /etc/puppetlabs/code/environments -delete
-    tar zxPf "$fn" --overwrite -T - <<ENDHERE
-/etc/puppetlabs/code/environments
-ENDHERE
-}
+#restore_environments() {
+#    log "enter..."
+#    [[ "$DEBUG" -gt 0 ]] && set -x
+#    fn=$( get_bkup_src )
+#    [[ -z "$fn" ]] && die "Cant find a puppet backup"
+#    find /etc/puppetlabs/code/environments -delete
+#    tar zxPf "$fn" --overwrite -T - <<ENDHERE
+#/etc/puppetlabs/code/environments
+#ENDHERE
+#}
 
 
-restore_ca() {
-    log "enter..."
-    [[ "$DEBUG" -gt 0 ]] && set -x
-    local fn=$( get_bkup_src )
-    [[ -z "$fn" ]] && die "Cant find a puppet backup"
-    tar zxPf "$fn" --overwrite -T - <<ENDHERE
-/etc/puppetlabs/puppet/ssl
-ENDHERE
-}
+#restore_ca() {
+#    log "enter..."
+#    [[ "$DEBUG" -gt 0 ]] && set -x
+#    local fn=$( get_bkup_src )
+#    [[ -z "$fn" ]] && die "Cant find a puppet backup"
+#    tar zxPf "$fn" --overwrite -T - <<ENDHERE
+#/etc/puppetlabs/puppet/ssl
+#ENDHERE
+#}
 
 
 configure_ca() {
@@ -342,18 +339,20 @@ install_puppet
 # Next steps depend on install type
 case "$BUILD_TYPE" in
     master)
-        case "$CONFIG_TYPE" in
-            restore)
-                restore_config
-                disable_puppetdb
-                restore_environments
-                restore_ca
-                ;;
-            new)
-                configure_ca
-                create_autosign
-                ;;
-        esac
+#        case "$CONFIG_TYPE" in
+#            restore)
+#                restore_config
+#                disable_puppetdb
+#                restore_environments
+#                restore_ca
+#                ;;
+#            new)
+#                configure_ca
+#                create_autosign
+#                ;;
+#        esac
+        configure_ca
+        create_autosign
         #puppetserver start
         #is_puppetserver_running
         ;;

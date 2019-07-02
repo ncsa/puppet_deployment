@@ -2,22 +2,26 @@
 Define a process to (re-)build, from scratch, a configuration management environment consisting of a version controlled Data Store (gitlab) and OS Configuration Manager (puppet).
 
 
+### Testing in Vagrant
+See: [vagrant/README](vagrant/)
+
+
 # Installation
 ### Common
 For both gitlab and puppet master nodes
-1. `curl https://raw.githubusercontent.com/ncsa/puppet_deployment/master/scripts/centos75_post.sh | bash`
+1. `curl https://raw.githubusercontent.com/ncsa/puppet_deployment/master/scripts/centos_post.sh | bash`
 1. `cd /root; git clone https://github.com/ncsa/puppet_deployment.git`
 
 ### Gitlab
 1. _(**Common** steps from above)_
-1. `/root/puppet_deployment/puppet_install -a -d`
+1. `/root/puppet_deployment/puppet/install.sh -a -d`
 1. Edit `/root/puppet_deployment/gitlab/data/common.yaml`
 1. `/root/puppet_deployment/gitlab/install.sh`
 1. _Future Work: restore from backup_
 
 ### Puppet master
 1. _(**Common** steps from above)_
-1. `/root/puppet_deployment/puppet_install -m -M new -V 5 -D <DNS_ALT_NAMES> -d`
+1. `/root/puppet_deployment/puppet/install.sh -m -V 5 -D <DNS_ALT_NAMES> -d`
    1. where <DNS_ALT_NAMES> is comma separated list of alternate names
       (note: public fqdn and local ip-addrs are automatically detected and should
       not be included in DNS_ALT_NAMES)
